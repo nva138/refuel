@@ -78,6 +78,10 @@ public class Meal {
     public void setEnteredText(String enteredText) {
         this.enteredText = enteredText;
     }
+
+    public List<MealPart> getParts() {
+        return parts;
+    }
 }
 
 
