@@ -3,6 +3,8 @@ package at.maximilianmayer.veggietracker.meal;
 import jakarta.persistence.*;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "meal")
@@ -24,6 +26,8 @@ public class Meal {
     @Column(name = "entered_text")
     private String enteredText;
 
+    @OneToMany(mappedBy = "meal", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<MealPart> parts = new ArrayList<>();
 
     public Meal(){}
 
@@ -32,6 +36,11 @@ public class Meal {
         this.name = name;
         this.isVegetarian = isVegetarian;
         this.enteredText = enteredText;
+    }
+
+    public void addPart(MealPart part) {
+        parts.add(part);
+        part.setMeal(this);
     }
 
     public Long getId() {

@@ -14,7 +14,7 @@ public class MealPart {
 
     @ManyToOne(optional = false)
     @JoinColumn(name = "meal_id")
-    private  Meal meal;
+    private Meal meal;
 
     @Column(name = "name", nullable = false)
     private String name;
