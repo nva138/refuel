@@ -15,7 +15,7 @@ public class MealService {
     }
 
 
-   public Meal createMeal(CreateMealRequest request) {
+   public MealResponse createMeal(CreateMealRequest request) {
         Meal meal = new Meal(Instant.now(),
                 request.name(),
                 request.isVegetarian(),
@@ -33,6 +33,7 @@ public class MealService {
             meal.addPart(part);
         }
 
-       return mealRepository.save(meal);
+        Meal saved = mealRepository.save(meal);
+        return MealResponse.from(saved);
     }
 }
