@@ -19,4 +19,9 @@ public class MealController {
         return mealService.createMeal(request);
     }
 
+    @GetMapping("/today")
+    public DaySummaryResponse getMealsForTheDay() {
+        return mealService.getToday();
+    }
+
 }
