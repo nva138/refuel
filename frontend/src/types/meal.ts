@@ -25,3 +25,19 @@ export interface DaySummary {
   totalCarbs: number
   totalFat: number
 }
+
+export interface CreateMealPartRequest {
+  name: string
+  kcalPer100g: number
+  proteinPer100g: number
+  carbsPer100g: number
+  fatPer100g: number
+  amountG: number
+}
+
+export interface CreateMealRequest {
+  name: string
+  isVegetarian: boolean
+  enteredText: string | null
+  parts: CreateMealPartRequest[]
+}

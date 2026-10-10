@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { RouterLink } from 'vue-router'
 import { fetchToday } from '@/api/meals'
 import type { DaySummary, Meal } from '@/types/meal'
 
@@ -51,7 +52,7 @@ function mealKcal(meal: Meal): number {
     </div>
   </section>
 
-  <section class="mt-8">
+  <section class="mt-8 pb-24">
     <h2 class="text-sm font-medium text-muted-foreground">Meals</h2>
 
     <p v-if="summary && summary.meals.length === 0" class="mt-3 text-sm text-muted-foreground">
@@ -72,4 +73,12 @@ function mealKcal(meal: Meal): number {
       </li>
     </ul>
   </section>
+
+  <RouterLink
+    :to="{ name: 'add-meal' }"
+    aria-label="Add meal"
+    class="fixed right-4 bottom-[max(1.5rem,env(safe-area-inset-bottom))] flex size-14 items-center justify-center rounded-full bg-emerald-400 text-3xl text-zinc-950 shadow-lg"
+  >
+    +
+  </RouterLink>
 </template>
