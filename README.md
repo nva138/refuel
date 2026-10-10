@@ -17,8 +17,17 @@ The app never says "this is vegetarian". It only shows warnings about things tha
 ## MVP
 
 - [ ] Upload a photo and get a suggestion
-- [ ] Confirm or correct and save the meal
-- [ ] Daily overview with total calories
+- [x] Confirm or correct and save the meal
+- [x] Daily overview with total calories
+
+## Roadmap
+
+- [ ] Describe a meal in text and get a suggestion
+- [ ] Delete and edit meals
+- [ ] Daily goals with progress
+- [ ] History and weekly overview
+- [ ] WHOOP integration to factor in calories burned
+- [ ] Deployment
 
 ## Stack
 
