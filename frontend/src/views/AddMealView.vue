@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { reactive, ref } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
-import { createMeal } from '@/api/meals'
-import type { CreateMealRequest } from '@/types/meal'
+import { createMeal, suggestMeal } from '@/api/meals'
+import type { CreateMealPartRequest, CreateMealRequest } from '@/types/meal'
 
 interface PartForm {
   name: string
@@ -22,7 +22,46 @@ const form = reactive({
   parts: [emptyPart()],
 })
 const saving = ref(false)
+const suggesting = ref(false)
+const veggieHints = ref<string[]>([])
 const error = ref<string | null>(null)
+
+function toFormValue(value: number): string {
+  return String(value).replace('.', ',')
+}
+
+function toPartForm(part: CreateMealPartRequest): PartForm {
+  return {
+    name: part.name,
+    kcalPer100g: toFormValue(part.kcalPer100g),
+    proteinPer100g: toFormValue(part.proteinPer100g),
+    carbsPer100g: toFormValue(part.carbsPer100g),
+    fatPer100g: toFormValue(part.fatPer100g),
+    amountG: toFormValue(part.amountG),
+  }
+}
+
+async function suggest() {
+  const text = form.enteredText.trim()
+  if (text === '') {
+    error.value = 'Describe what you ate first.'
+    return
+  }
+
+  suggesting.value = true
+  error.value = null
+  try {
+    const suggestion = await suggestMeal({ text })
+    form.name = suggestion.name
+    form.parts = suggestion.parts.map(toPartForm)
+    veggieHints.value = suggestion.veggieHints
+    form.isVegetarian = suggestion.veggieHints.length === 0
+  } catch {
+    error.value = 'Suggestion failed. Is the backend running?'
+  } finally {
+    suggesting.value = false
+  }
+}
 
 function emptyPart(): PartForm {
   return {
@@ -105,6 +144,35 @@ const inputClass =
   </div>
 
   <form class="mt-6 space-y-6 pb-28" @submit.prevent="save">
+    <section class="space-y-3 rounded-2xl bg-card p-4">
+      <label class="block">
+        <span class="text-sm text-muted-foreground">What did you eat?</span>
+        <textarea
+          v-model="form.enteredText"
+          :class="inputClass"
+          class="mt-1"
+          rows="3"
+          placeholder="2 eggs and a slice of wholegrain bread with butter"
+        />
+      </label>
+      <button
+        type="button"
+        :disabled="suggesting"
+        class="w-full rounded-xl border border-emerald-400/60 py-2.5 font-medium text-emerald-400 disabled:opacity-50"
+        @click="suggest"
+      >
+        {{ suggesting ? 'Thinking…' : 'Suggest' }}
+      </button>
+    </section>
+
+    <section
+      v-if="veggieHints.length > 0"
+      class="space-y-1 rounded-2xl border border-amber-400/40 bg-amber-400/10 p-4 text-sm text-amber-200"
+    >
+      <p class="font-medium">Might not be vegetarian</p>
+      <p v-for="hint in veggieHints" :key="hint">{{ hint }}</p>
+    </section>
+
     <section class="space-y-3">
       <label class="block">
         <span class="text-sm text-muted-foreground">Name</span>
@@ -114,17 +182,6 @@ const inputClass =
       <label class="flex items-center justify-between rounded-xl bg-card px-4 py-3">
         <span>Vegetarian</span>
         <input v-model="form.isVegetarian" type="checkbox" class="size-5 accent-emerald-400" />
-      </label>
-
-      <label class="block">
-        <span class="text-sm text-muted-foreground">Note (optional)</span>
-        <textarea
-          v-model="form.enteredText"
-          :class="inputClass"
-          class="mt-1"
-          rows="2"
-          placeholder="Rice with lentil curry"
-        />
       </label>
     </section>
 

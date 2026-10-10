@@ -41,3 +41,13 @@ export interface CreateMealRequest {
   enteredText: string | null
   parts: CreateMealPartRequest[]
 }
+
+export interface SuggestMealRequest {
+  text: string
+}
+
+export interface SuggestMealResponse {
+  name: string
+  parts: CreateMealPartRequest[]
+  veggieHints: string[]
+}
