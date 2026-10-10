@@ -8,9 +8,11 @@ import org.springframework.web.bind.annotation.*;
 public class MealController {
 
     private final MealService mealService;
+    private final MealSuggester mealSuggester;
 
-    public MealController(MealService mealService) {
+    public MealController(MealService mealService, MealSuggester mealSuggester) {
         this.mealService = mealService;
+        this.mealSuggester = mealSuggester;
     }
 
     @ResponseStatus(HttpStatus.CREATED)
@@ -24,4 +26,8 @@ public class MealController {
         return mealService.getToday();
     }
 
+    @PostMapping("/suggest")
+    public SuggestMealResponse suggestMeal(@RequestBody SuggestMealRequest request) {
+        return mealService.suggestMeal(request);
+    }
 }

@@ -14,9 +14,11 @@ import java.util.List;
 public class MealService {
 
     private final MealRepository mealRepository;
+    private final MealSuggester mealSuggester;
 
-    public MealService(MealRepository mealRepository) {
+    public MealService(MealRepository mealRepository, MealSuggester mealSuggester) {
         this.mealRepository = mealRepository;
+        this.mealSuggester = mealSuggester;
     }
 
 
@@ -69,5 +71,9 @@ public class MealService {
        }
        List<MealResponse> mealResponses = meals.stream().map(MealResponse::from).toList();
        return new DaySummaryResponse(today, mealResponses, totalKcal, totalProtein, totalCarbs, totalFats);
+   }
+
+   public SuggestMealResponse suggestMeal(SuggestMealRequest request) {
+        return mealSuggester.suggest(request.text());
    }
 }
