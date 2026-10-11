@@ -12,8 +12,8 @@ export interface Meal {
   id: number
   eatenAt: string
   name: string
-  isVegetarian: boolean
   enteredText: string | null
+  veggieHints: string[]
   parts: MealPart[]
 }
 
@@ -37,8 +37,8 @@ export interface CreateMealPartRequest {
 
 export interface CreateMealRequest {
   name: string
-  isVegetarian: boolean
   enteredText: string | null
+  veggieHints: string[]
   parts: CreateMealPartRequest[]
 }
 

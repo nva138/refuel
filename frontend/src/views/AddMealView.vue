@@ -17,7 +17,6 @@ const router = useRouter()
 
 const form = reactive({
   name: '',
-  isVegetarian: true,
   enteredText: '',
   parts: [emptyPart()],
 })
@@ -55,7 +54,6 @@ async function suggest() {
     form.name = suggestion.name
     form.parts = suggestion.parts.map(toPartForm)
     veggieHints.value = suggestion.veggieHints
-    form.isVegetarian = suggestion.veggieHints.length === 0
   } catch {
     error.value = 'Suggestion failed. Is the backend running?'
   } finally {
@@ -109,7 +107,7 @@ async function save() {
 
   const request: CreateMealRequest = {
     name: form.name.trim(),
-    isVegetarian: form.isVegetarian,
+    veggieHints: veggieHints.value,
     enteredText: form.enteredText.trim() === '' ? null : form.enteredText.trim(),
     parts: form.parts.map((part) => ({
       name: part.name.trim(),
@@ -177,11 +175,6 @@ const inputClass =
       <label class="block">
         <span class="text-sm text-muted-foreground">Name</span>
         <input v-model="form.name" :class="inputClass" class="mt-1" placeholder="Lunch" />
-      </label>
-
-      <label class="flex items-center justify-between rounded-xl bg-card px-4 py-3">
-        <span>Vegetarian</span>
-        <input v-model="form.isVegetarian" type="checkbox" class="size-5 accent-emerald-400" />
       </label>
     </section>
 

@@ -60,16 +60,17 @@ function mealKcal(meal: Meal): number {
     </p>
 
     <ul class="mt-3 space-y-2">
-      <li
-        v-for="meal in summary?.meals"
-        :key="meal.id"
-        class="flex items-center justify-between rounded-2xl bg-card px-4 py-3"
-      >
-        <div>
-          <p class="font-medium">{{ meal.name }}</p>
-          <p class="text-xs text-muted-foreground">{{ formatTime(meal.eatenAt) }}</p>
+      <li v-for="meal in summary?.meals" :key="meal.id" class="rounded-2xl bg-card px-4 py-3">
+        <div class="flex items-center justify-between gap-3">
+          <div>
+            <p class="font-medium">{{ meal.name }}</p>
+            <p class="text-xs text-muted-foreground">{{ formatTime(meal.eatenAt) }}</p>
+          </div>
+          <p class="shrink-0 tabular-nums">{{ formatNumber(mealKcal(meal)) }} kcal</p>
         </div>
-        <p class="tabular-nums">{{ formatNumber(mealKcal(meal)) }} kcal</p>
+        <ul v-if="meal.veggieHints.length > 0" class="mt-2 space-y-1 text-xs text-amber-200">
+          <li v-for="hint in meal.veggieHints" :key="hint">⚠️ {{ hint }}</li>
+        </ul>
       </li>
     </ul>
   </section>
