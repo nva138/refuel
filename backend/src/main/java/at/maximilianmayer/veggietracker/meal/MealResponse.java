@@ -6,8 +6,8 @@ import java.util.List;
 public record MealResponse(Long id,
                            Instant eatenAt,
                            String name,
-                           boolean isVegetarian,
                            String enteredText,
+                           List<String> veggieHints,
                            List<MealPartResponse> parts) {
 
     public static MealResponse from(Meal meal) {
@@ -21,8 +21,8 @@ public record MealResponse(Long id,
                 meal.getId(),
                 meal.getEatenAt(),
                 meal.getName(),
-                meal.isVegetarian(),
                 meal.getEnteredText(),
+                List.copyOf(meal.getVeggieHints()),
                 partResponses
         );
     }

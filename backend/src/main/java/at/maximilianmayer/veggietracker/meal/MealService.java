@@ -25,8 +25,8 @@ public class MealService {
    public MealResponse createMeal(CreateMealRequest request) {
         Meal meal = new Meal(Instant.now(),
                 request.name(),
-                request.isVegetarian(),
-                request.enteredText());
+                request.enteredText(),
+                request.veggieHints());
 
         for(CreateMealPartRequest partRequest : request.parts()) {
             MealPart part = new MealPart(meal,

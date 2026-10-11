@@ -20,22 +20,25 @@ public class Meal {
     @Column(name = "name", nullable = false)
     private String name;
 
-    @Column(name = "is_vegetarian", nullable = false)
-    private boolean isVegetarian;
-
     @Column(name = "entered_text")
     private String enteredText;
+
+    @ElementCollection
+    @CollectionTable(name = "meal_veggie_hint", joinColumns = @JoinColumn(name = "meal_id"))
+    @Column(name = "hint")
+    private List<String> veggieHints = new ArrayList<>();
 
     @OneToMany(mappedBy = "meal", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<MealPart> parts = new ArrayList<>();
 
     public Meal(){}
 
-    public Meal(Instant eatenAt, String name, boolean isVegetarian, String enteredText) {
+    public Meal(Instant eatenAt, String name, String enteredText, List<String> veggieHints) {
         this.eatenAt = eatenAt;
         this.name = name;
-        this.isVegetarian = isVegetarian;
         this.enteredText = enteredText;
+        this.veggieHints = new ArrayList<>(veggieHints);
+
     }
 
     public void addPart(MealPart part) {
@@ -63,14 +66,6 @@ public class Meal {
         this.name = name;
     }
 
-    public boolean isVegetarian() {
-        return isVegetarian;
-    }
-
-    public void setVegetarian(boolean vegetarian) {
-        isVegetarian = vegetarian;
-    }
-
     public String getEnteredText() {
         return enteredText;
     }
@@ -81,6 +76,10 @@ public class Meal {
 
     public List<MealPart> getParts() {
         return parts;
+    }
+
+    public List<String> getVeggieHints() {
+        return veggieHints;
     }
 }
 
