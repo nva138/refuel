@@ -76,4 +76,8 @@ public class MealService {
    public SuggestMealResponse suggestMeal(SuggestMealRequest request) {
         return mealSuggester.suggest(request.text());
    }
+
+   public SuggestMealResponse suggestMealFromPhoto(byte[] photo, String text) {
+        return mealSuggester.suggestFromPhoto(photo, text);
+   }
 }

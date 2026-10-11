@@ -1,16 +1,22 @@
 package at.maximilianmayer.veggietracker.meal;
+
 import com.anthropic.client.AnthropicClient;
 import com.anthropic.client.okhttp.AnthropicOkHttpClient;
 import com.anthropic.models.messages.*;
 import org.springframework.stereotype.Component;
+
+import java.util.ArrayList;
+import java.util.Base64;
+import java.util.List;
 
 @Component
 public class AnthropicMealSuggester implements MealSuggester {
 
     private static final String SYSTEM_PROMPT = """
             You help a user log meals in a nutrition tracker. The user describes what they ate in a
-            short text, usually in German. Turn it into a structured suggestion that the user will
-            review and correct before saving.
+            short text, sends a photo of the meal, or both. The text is usually in German. When
+            there is a photo, estimate the portion sizes from what you can see. Turn it into a
+            structured suggestion that the user will review and correct before saving.
 
             Name
             - Give the meal a short, natural name in the language the user wrote in, for example
@@ -43,11 +49,28 @@ public class AnthropicMealSuggester implements MealSuggester {
 
     @Override
     public SuggestMealResponse suggest(String text) {
+        return ask(List.of(ContentBlockParam.ofText(text)));
+    }
+
+    @Override
+    public SuggestMealResponse suggestFromPhoto(byte[] photo, String text) {
+        List<ContentBlockParam> content = new ArrayList<>();
+        content.add(ContentBlockParam.ofImage(Base64ImageSource.builder()
+                .data(Base64.getEncoder().encodeToString(photo))
+                .mediaType(Base64ImageSource.MediaType.IMAGE_JPEG)
+                .build()));
+        if (text != null && !text.isBlank()) {
+            content.add(ContentBlockParam.ofText(text));
+        }
+        return ask(content);
+    }
+
+    private SuggestMealResponse ask(List<ContentBlockParam> content) {
         StructuredMessageCreateParams<SuggestMealResponse> params = MessageCreateParams.builder()
                 .model(Model.CLAUDE_HAIKU_5_5)
                 .maxTokens(2048)
                 .system(SYSTEM_PROMPT)
-                .addUserMessage(text)
+                .addUserMessageOfBlockParams(content)
                 .outputConfig(SuggestMealResponse.class)
                 .build();
 
