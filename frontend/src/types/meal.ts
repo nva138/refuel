@@ -51,3 +51,8 @@ export interface SuggestMealResponse {
   parts: CreateMealPartRequest[]
   veggieHints: string[]
 }
+
+export interface ReadLabelResponse {
+  part: CreateMealPartRequest
+  veggieHints: string[]
+}

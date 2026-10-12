@@ -84,4 +84,8 @@ public class MealService {
    public void deleteMeal(Long id) {
         mealRepository.deleteById(id);
    }
+
+   public ReadLabelResponse readLabel(byte[] photo) {
+        return mealSuggester.readLabel(photo);
+   }
 }

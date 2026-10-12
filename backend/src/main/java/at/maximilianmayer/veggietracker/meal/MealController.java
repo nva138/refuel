@@ -40,9 +40,16 @@ public class MealController {
         return mealService.suggestMealFromPhoto(photo.getBytes(), text);
     }
 
+    @PostMapping(value = "/read-label", consumes =  MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ReadLabelResponse readLabel(@RequestPart("photo") MultipartFile photo) throws IOException {
+        return mealService.readLabel(photo.getBytes());
+    }
+
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteMeal(@PathVariable Long id) {
         mealService.deleteMeal(id);
     }
+
+
 }

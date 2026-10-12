@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, reactive, ref } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
-import { createMeal, suggestMeal, suggestMealFromPhoto } from '@/api/meals'
+import { createMeal, readLabel, suggestMeal, suggestMealFromPhoto } from '@/api/meals'
 import type { CreateMealPartRequest, CreateMealRequest, SuggestMealResponse } from '@/types/meal'
 
 interface PartForm {
@@ -104,6 +104,37 @@ function applySuggestion(suggestion: SuggestMealResponse) {
   form.name = suggestion.name
   form.parts = suggestion.parts.map(toPartForm)
   veggieHints.value = suggestion.veggieHints
+}
+
+const labelInput = ref<HTMLInputElement | null>(null)
+const labelTargetIndex = ref<number | null>(null)
+const readingIndex = ref<number | null>(null)
+
+function chooseLabelPhoto(index: number) {
+  labelTargetIndex.value = index
+  labelInput.value?.click()
+}
+
+async function onLabelSelected(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  const index = labelTargetIndex.value
+  input.value = ''
+  if (!file || index === null) return
+
+  readingIndex.value = index
+  error.value = null
+  try {
+    const result = await readLabel(await toResizedJpeg(file))
+    form.parts[index] = toPartForm(result.part)
+    const newHints = result.veggieHints.filter((hint) => !veggieHints.value.includes(hint))
+    veggieHints.value = [...veggieHints.value, ...newHints]
+  } catch {
+    error.value = 'The label could not be read. Try a sharper photo.'
+  } finally {
+    readingIndex.value = null
+    labelTargetIndex.value = null
+  }
 }
 
 async function suggest() {
@@ -324,6 +355,14 @@ const inputClass =
     <section class="space-y-3">
       <h2 class="text-sm font-medium text-muted-foreground">Parts</h2>
 
+      <input
+        ref="labelInput"
+        type="file"
+        accept="image/*"
+        class="hidden"
+        @change="onLabelSelected"
+      />
+
       <div
         v-for="(part, index) in form.parts"
         :key="index"
@@ -331,6 +370,15 @@ const inputClass =
       >
         <div class="flex gap-3">
           <input v-model="part.name" :class="inputClass" placeholder="Rice" />
+          <button
+            type="button"
+            :aria-label="`Read nutrition label for part ${index + 1}`"
+            :disabled="readingIndex !== null"
+            class="shrink-0 rounded-xl border border-border px-3 disabled:opacity-50"
+            @click="chooseLabelPhoto(index)"
+          >
+            {{ readingIndex === index ? '…' : '📷' }}
+          </button>
           <button
             v-if="form.parts.length > 1"
             type="button"

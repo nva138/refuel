@@ -4,6 +4,7 @@ import type {
   Meal,
   SuggestMealRequest,
   SuggestMealResponse,
+  ReadLabelResponse,
 } from '@/types/meal'
 
 export async function fetchToday(): Promise<DaySummary> {
@@ -52,4 +53,15 @@ export async function suggestMealFromPhoto(
 export async function deleteMeal(id: number): Promise<void> {
   const response = await fetch(`/api/meals/${id}`, { method: 'DELETE' })
   if (!response.ok) throw new Error(`Request failed: ${response.status}`)
+}
+
+export async function readLabel(photo: Blob): Promise<ReadLabelResponse> {
+  const formData = new FormData()
+  formData.append('photo', photo, 'part.jpg')
+  const response = await fetch('/api/meals/read-label', {
+    method: 'POST',
+    body: formData,
+  })
+  if (!response.ok) throw new Error(`Request failed: ${response.status}`)
+  return response.json()
 }
