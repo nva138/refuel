@@ -48,3 +48,8 @@ export async function suggestMealFromPhoto(
   if (!response.ok) throw new Error(`Request failed: ${response.status}`)
   return response.json()
 }
+
+export async function deleteMeal(id: number): Promise<void> {
+  const response = await fetch(`/api/meals/${id}`, { method: 'DELETE' })
+  if (!response.ok) throw new Error(`Request failed: ${response.status}`)
+}

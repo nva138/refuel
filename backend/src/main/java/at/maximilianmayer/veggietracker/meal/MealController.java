@@ -39,4 +39,10 @@ public class MealController {
     public SuggestMealResponse suggestMealPhoto(@RequestPart("photo") MultipartFile photo, @RequestParam(value = "text", required = false) String text)  throws IOException {
         return mealService.suggestMealFromPhoto(photo.getBytes(), text);
     }
+
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteMeal(@PathVariable Long id) {
+        mealService.deleteMeal(id);
+    }
 }

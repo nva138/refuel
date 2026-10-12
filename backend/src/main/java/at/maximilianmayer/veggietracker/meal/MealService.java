@@ -80,4 +80,8 @@ public class MealService {
    public SuggestMealResponse suggestMealFromPhoto(byte[] photo, String text) {
         return mealSuggester.suggestFromPhoto(photo, text);
    }
+
+   public void deleteMeal(Long id) {
+        mealRepository.deleteById(id);
+   }
 }
