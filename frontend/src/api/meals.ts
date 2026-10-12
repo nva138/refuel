@@ -31,3 +31,20 @@ export async function suggestMeal(request: SuggestMealRequest): Promise<SuggestM
   if (!response.ok) throw new Error(`Request failed: ${response.status}`)
   return response.json()
 }
+
+export async function suggestMealFromPhoto(
+  photo: Blob,
+  text: string,
+): Promise<SuggestMealResponse> {
+  const formData = new FormData()
+  formData.append('photo', photo, 'meal.jpg')
+  if (text.trim() !== '') {
+    formData.append('text', text)
+  }
+  const response = await fetch('/api/meals/suggest-photo', {
+    method: 'POST',
+    body: formData,
+  })
+  if (!response.ok) throw new Error(`Request failed: ${response.status}`)
+  return response.json()
+}
