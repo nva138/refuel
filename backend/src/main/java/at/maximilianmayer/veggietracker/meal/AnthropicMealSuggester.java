@@ -21,7 +21,23 @@ public class AnthropicMealSuggester implements MealSuggester {
             Write the meal name, all part names and all veggie hints in German, even if the input
             is in another language.
 
-            Work in this order.
+            Nutrition labels and packaging
+            - If the photo shows a nutrition facts table or the packaging of a product, read the
+              values instead of estimating them. Copy kcal, protein, carbohydrates and fat per
+              100 g exactly as printed. Use kcal, not kJ. Use total carbohydrates, not the
+              "davon Zucker" line.
+            - If the label only shows values per serving, convert them to 100 g using the
+              printed serving size.
+            - Name the part after the product, including the brand if it is readable, for
+              example "Skyr Natur (Milbona)".
+            - For the amount, use the text first ("80 g", "half the pack"). Otherwise use the
+              serving size printed on the package. Only if there is none, use the whole package
+              if it is a single serving, or 100 g.
+            - Check the ingredient list, if visible, for the veggie hints, for example gelatin,
+              carmine (E120), animal rennet or meat extract.
+            - Skip the estimation steps below for values you could read from the label.
+
+            For meals without a label, work in this order.
 
             1. Identify every food
             - With a photo, look at the whole plate and list everything you can see, including
@@ -100,36 +116,73 @@ public class AnthropicMealSuggester implements MealSuggester {
             - Do not warn about eggs, dairy or honey.
             """;
 
+    private static final String LABEL_PROMPT = """
+            You read nutrition labels for a vegetarian user's nutrition tracker. The photo shows
+            the nutrition facts table, the packaging or the ingredient list of one product.
+            Return exactly one part for that product. Read the values, never estimate them.
+
+            Write the part name and all veggie hints in German.
+
+            Part
+            - name: the product name, including the brand if it is readable, for example
+              "Proteinriegel Schoko (Barebells)".
+            - kcalPer100g, proteinPer100g, carbsPer100g, fatPer100g: copy the values per 100 g
+              or 100 ml exactly as printed. Use kcal, not kJ. Use total carbohydrates, not the
+              "davon Zucker" line. If the label only shows values per serving, convert them to
+              100 g using the printed serving size.
+            - amountG: the whole package if it is a single serving, for example one bar or one
+              bottle, using the printed net weight or volume (treat 1 ml as 1 g). Otherwise use
+              the printed serving size. Only if neither is visible, use 100.
+            - If a value is not readable, give the typical value for this kind of product.
+
+            Veggie hints
+            - If the ingredient list is visible, check it for ingredients that are not or might
+              not be vegetarian, for example gelatin, carmine (E120), animal rennet, meat
+              extract, fish, or shellac (E904). Name the ingredient in a short German hint.
+            - Never claim that the product is vegetarian. If nothing is suspicious or no
+              ingredient list is visible, return an empty list.
+            - Do not warn about eggs, dairy or honey.
+            """;
+
     private final AnthropicClient client = AnthropicOkHttpClient.fromEnv();
 
     @Override
     public SuggestMealResponse suggest(String text) {
-        return ask(List.of(ContentBlockParam.ofText(text)));
+        return ask(SYSTEM_PROMPT, List.of(ContentBlockParam.ofText(text)), SuggestMealResponse.class);
     }
 
     @Override
     public SuggestMealResponse suggestFromPhoto(byte[] photo, String text) {
         List<ContentBlockParam> content = new ArrayList<>();
-        content.add(ContentBlockParam.ofImage(Base64ImageSource.builder()
-                .data(Base64.getEncoder().encodeToString(photo))
-                .mediaType(Base64ImageSource.MediaType.IMAGE_JPEG)
-                .build()));
+        content.add(imageBlock(photo));
         if (text != null && !text.isBlank()) {
             content.add(ContentBlockParam.ofText(text));
         }
-        return ask(content);
+        return ask(SYSTEM_PROMPT, content, SuggestMealResponse.class);
     }
 
-    private SuggestMealResponse ask(List<ContentBlockParam> content) {
-        StructuredMessageCreateParams<SuggestMealResponse> params = MessageCreateParams.builder()
+    @Override
+    public ReadLabelResponse readLabel(byte[] photo) {
+        return ask(LABEL_PROMPT, List.of(imageBlock(photo)), ReadLabelResponse.class);
+    }
+
+    private ContentBlockParam imageBlock(byte[] photo) {
+        return ContentBlockParam.ofImage(Base64ImageSource.builder()
+                .data(Base64.getEncoder().encodeToString(photo))
+                .mediaType(Base64ImageSource.MediaType.IMAGE_JPEG)
+                .build());
+    }
+
+    private <T> T ask(String systemPrompt, List<ContentBlockParam> content, Class<T> responseType) {
+        StructuredMessageCreateParams<T> params = MessageCreateParams.builder()
                 .model(Model.CLAUDE_SONNET_5_5)
                 .maxTokens(2048)
-                .system(SYSTEM_PROMPT)
+                .system(systemPrompt)
                 .addUserMessageOfBlockParams(content)
-                .outputConfig(SuggestMealResponse.class)
+                .outputConfig(responseType)
                 .build();
 
-        StructuredMessage<SuggestMealResponse> message = client.messages().create(params);
+        StructuredMessage<T> message = client.messages().create(params);
 
         return message.content().stream()
                 .flatMap(block -> block.text().stream())
