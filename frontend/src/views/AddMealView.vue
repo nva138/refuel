@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { reactive, ref } from 'vue'
+import { computed, reactive, ref } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
-import { createMeal, suggestMeal } from '@/api/meals'
-import type { CreateMealPartRequest, CreateMealRequest } from '@/types/meal'
+import { createMeal, suggestMeal, suggestMealFromPhoto } from '@/api/meals'
+import type { CreateMealPartRequest, CreateMealRequest, SuggestMealResponse } from '@/types/meal'
 
 interface PartForm {
   name: string
@@ -40,20 +40,86 @@ function toPartForm(part: CreateMealPartRequest): PartForm {
   }
 }
 
+const MAX_PHOTO_SIZE = 1600
+
+const photoInput = ref<HTMLInputElement | null>(null)
+const photo = ref<Blob | null>(null)
+const photoPreview = ref<string | null>(null)
+
+function loadImage(file: File): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file)
+    const image = new Image()
+    image.onload = () => {
+      URL.revokeObjectURL(url)
+      resolve(image)
+    }
+    image.onerror = () => {
+      URL.revokeObjectURL(url)
+      reject(new Error('Could not read the image'))
+    }
+    image.src = url
+  })
+}
+
+async function toResizedJpeg(file: File): Promise<Blob> {
+  const image = await loadImage(file)
+  const scale = Math.min(1, MAX_PHOTO_SIZE / Math.max(image.width, image.height))
+  const canvas = document.createElement('canvas')
+  canvas.width = Math.round(image.width * scale)
+  canvas.height = Math.round(image.height * scale)
+  canvas.getContext('2d')?.drawImage(image, 0, 0, canvas.width, canvas.height)
+
+  return new Promise((resolve, reject) => {
+    canvas.toBlob(
+      (blob) => (blob ? resolve(blob) : reject(new Error('Could not convert the image'))),
+      'image/jpeg',
+      0.85,
+    )
+  })
+}
+
+async function onPhotoSelected(event: Event) {
+  const file = (event.target as HTMLInputElement).files?.[0]
+  if (!file) return
+
+  error.value = null
+  try {
+    removePhoto()
+    photo.value = await toResizedJpeg(file)
+    photoPreview.value = URL.createObjectURL(photo.value)
+  } catch {
+    error.value = 'This photo could not be read. Try another one.'
+  }
+}
+
+function removePhoto() {
+  if (photoPreview.value) URL.revokeObjectURL(photoPreview.value)
+  photo.value = null
+  photoPreview.value = null
+  if (photoInput.value) photoInput.value.value = ''
+}
+
+function applySuggestion(suggestion: SuggestMealResponse) {
+  form.name = suggestion.name
+  form.parts = suggestion.parts.map(toPartForm)
+  veggieHints.value = suggestion.veggieHints
+}
+
 async function suggest() {
   const text = form.enteredText.trim()
-  if (text === '') {
-    error.value = 'Describe what you ate first.'
+  if (text === '' && !photo.value) {
+    error.value = 'Describe what you ate or add a photo first.'
     return
   }
 
   suggesting.value = true
   error.value = null
   try {
-    const suggestion = await suggestMeal({ text })
-    form.name = suggestion.name
-    form.parts = suggestion.parts.map(toPartForm)
-    veggieHints.value = suggestion.veggieHints
+    const suggestion = photo.value
+      ? await suggestMealFromPhoto(photo.value, text)
+      : await suggestMeal({ text })
+    applySuggestion(suggestion)
   } catch {
     error.value = 'Suggestion failed. Is the backend running?'
   } finally {
@@ -83,6 +149,25 @@ function removePart(index: number) {
 function toNumber(value: string): number {
   return Number(value.replace(',', '.'))
 }
+
+function partValue(perHundredGrams: string, amountG: string): number {
+  const value = (toNumber(perHundredGrams) * toNumber(amountG)) / 100
+  return Number.isFinite(value) ? value : 0
+}
+
+const totals = computed(() =>
+  form.parts.reduce(
+    (sum, part) => ({
+      kcal: sum.kcal + partValue(part.kcalPer100g, part.amountG),
+      protein: sum.protein + partValue(part.proteinPer100g, part.amountG),
+      carbs: sum.carbs + partValue(part.carbsPer100g, part.amountG),
+      fat: sum.fat + partValue(part.fatPer100g, part.amountG),
+    }),
+    { kcal: 0, protein: 0, carbs: 0, fat: 0 },
+  ),
+)
+
+const wholeNumber = new Intl.NumberFormat('de-AT', { maximumFractionDigits: 0 })
 
 function isValid(): boolean {
   if (form.name.trim() === '' || form.parts.length === 0) return false
@@ -153,14 +238,48 @@ const inputClass =
           placeholder="2 eggs and a slice of wholegrain bread with butter"
         />
       </label>
-      <button
-        type="button"
-        :disabled="suggesting"
-        class="w-full rounded-xl border border-emerald-400/60 py-2.5 font-medium text-emerald-400 disabled:opacity-50"
-        @click="suggest"
-      >
-        {{ suggesting ? 'Thinking…' : 'Suggest' }}
-      </button>
+
+      <div v-if="photoPreview" class="relative">
+        <img
+          :src="photoPreview"
+          alt="Selected meal photo"
+          class="max-h-56 w-full rounded-xl object-cover"
+        />
+        <button
+          type="button"
+          aria-label="Remove photo"
+          class="absolute top-2 right-2 flex size-8 items-center justify-center rounded-full bg-background/80 text-sm"
+          @click="removePhoto"
+        >
+          ✕
+        </button>
+      </div>
+
+      <input
+        ref="photoInput"
+        type="file"
+        accept="image/*"
+        class="hidden"
+        @change="onPhotoSelected"
+      />
+
+      <div class="grid grid-cols-2 gap-3">
+        <button
+          type="button"
+          class="rounded-xl border border-border py-2.5 font-medium"
+          @click="photoInput?.click()"
+        >
+          {{ photo ? 'Change photo' : '📷 Photo' }}
+        </button>
+        <button
+          type="button"
+          :disabled="suggesting"
+          class="rounded-xl border border-emerald-400/60 py-2.5 font-medium text-emerald-400 disabled:opacity-50"
+          @click="suggest"
+        >
+          {{ suggesting ? 'Thinking…' : 'Suggest' }}
+        </button>
+      </div>
     </section>
 
     <section
@@ -176,6 +295,30 @@ const inputClass =
         <span class="text-sm text-muted-foreground">Name</span>
         <input v-model="form.name" :class="inputClass" class="mt-1" placeholder="Lunch" />
       </label>
+    </section>
+
+    <section class="rounded-2xl bg-card p-4">
+      <div class="flex items-baseline justify-between">
+        <span class="text-sm text-muted-foreground">Total</span>
+        <span class="text-3xl font-bold tabular-nums">
+          {{ wholeNumber.format(totals.kcal) }}
+          <span class="text-sm font-normal text-muted-foreground">kcal</span>
+        </span>
+      </div>
+      <div class="mt-3 grid grid-cols-3 gap-2 text-center">
+        <div>
+          <p class="font-semibold tabular-nums">{{ wholeNumber.format(totals.protein) }} g</p>
+          <p class="text-xs text-muted-foreground">Protein</p>
+        </div>
+        <div>
+          <p class="font-semibold tabular-nums">{{ wholeNumber.format(totals.carbs) }} g</p>
+          <p class="text-xs text-muted-foreground">Carbs</p>
+        </div>
+        <div>
+          <p class="font-semibold tabular-nums">{{ wholeNumber.format(totals.fat) }} g</p>
+          <p class="text-xs text-muted-foreground">Fat</p>
+        </div>
+      </div>
     </section>
 
     <section class="space-y-3">
