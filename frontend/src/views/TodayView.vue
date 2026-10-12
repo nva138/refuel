@@ -1,14 +1,31 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
-import { fetchToday } from '@/api/meals'
+import { deleteMeal, fetchToday } from '@/api/meals'
 import type { DaySummary, Meal } from '@/types/meal'
 
 const summary = ref<DaySummary | null>(null)
+const deletingId = ref<number | null>(null)
 
-onMounted(async () => {
+async function load() {
   summary.value = await fetchToday()
-})
+}
+
+onMounted(load)
+
+async function remove(meal: Meal) {
+  if (!window.confirm(`Delete "${meal.name}"?`)) return
+
+  deletingId.value = meal.id
+  try {
+    await deleteMeal(meal.id)
+    await load()
+  } catch {
+    window.alert('Deleting failed. Is the backend running?')
+  } finally {
+    deletingId.value = null
+  }
+}
 
 const number = new Intl.NumberFormat('de-AT', { maximumFractionDigits: 0 })
 
@@ -66,7 +83,18 @@ function mealKcal(meal: Meal): number {
             <p class="font-medium">{{ meal.name }}</p>
             <p class="text-xs text-muted-foreground">{{ formatTime(meal.eatenAt) }}</p>
           </div>
-          <p class="shrink-0 tabular-nums">{{ formatNumber(mealKcal(meal)) }} kcal</p>
+          <div class="flex shrink-0 items-center gap-1">
+            <p class="tabular-nums">{{ formatNumber(mealKcal(meal)) }} kcal</p>
+            <button
+              type="button"
+              :aria-label="`Delete ${meal.name}`"
+              :disabled="deletingId === meal.id"
+              class="-mr-2 flex size-9 items-center justify-center rounded-full text-muted-foreground disabled:opacity-40"
+              @click="remove(meal)"
+            >
+              ✕
+            </button>
+          </div>
         </div>
         <ul v-if="meal.veggieHints.length > 0" class="mt-2 space-y-1 text-xs text-amber-200">
           <li v-for="hint in meal.veggieHints" :key="hint">⚠️ {{ hint }}</li>
