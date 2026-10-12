@@ -1,14 +1,68 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import { deleteMeal, fetchToday } from '@/api/meals'
+import { fetchSettings } from '@/api/settings'
 import type { DaySummary, Meal } from '@/types/meal'
+import type { Settings } from '@/types/settings'
+
+const MAINTAIN_TOLERANCE = 0.05
 
 const summary = ref<DaySummary | null>(null)
+const settings = ref<Settings | null>(null)
 const deletingId = ref<number | null>(null)
 
 async function load() {
-  summary.value = await fetchToday()
+  const [today, currentSettings] = await Promise.all([fetchToday(), fetchSettings()])
+  summary.value = today
+  settings.value = currentSettings
+}
+
+const kcalOnTrack = computed(() => {
+  if (!summary.value || !settings.value) return null
+  const eaten = summary.value.totalKcal
+  const reference = settings.value.kcalReference
+  switch (settings.value.mode) {
+    case 'CUT':
+      return eaten <= reference
+    case 'BULK':
+      return eaten >= reference
+    default:
+      return Math.abs(eaten - reference) <= reference * MAINTAIN_TOLERANCE
+  }
+})
+
+const proteinOnTrack = computed(() => {
+  if (!summary.value || !settings.value) return null
+  return summary.value.totalProtein >= settings.value.proteinGoalG
+})
+
+const modeLabel = computed(() => {
+  switch (settings.value?.mode) {
+    case 'CUT':
+      return 'Cut'
+    case 'BULK':
+      return 'Bulk'
+    case 'MAINTAIN':
+      return 'Maintain'
+    default:
+      return ''
+  }
+})
+
+function statusColor(onTrack: boolean | null): string {
+  if (onTrack === null) return ''
+  return onTrack ? 'text-emerald-400' : 'text-red-400'
+}
+
+function barColor(onTrack: boolean | null): string {
+  if (onTrack === null) return 'bg-muted-foreground'
+  return onTrack ? 'bg-emerald-400' : 'bg-red-400'
+}
+
+function progress(value: number | undefined, goal: number | undefined): string {
+  if (!value || !goal) return '0%'
+  return `${Math.min(100, (value / goal) * 100)}%`
 }
 
 onMounted(load)
@@ -47,17 +101,51 @@ function mealKcal(meal: Meal): number {
 </script>
 
 <template>
-  <h1 class="text-2xl font-semibold">Today</h1>
+  <div class="flex items-center justify-between">
+    <h1 class="text-2xl font-semibold">Today</h1>
+    <RouterLink
+      :to="{ name: 'settings' }"
+      aria-label="Settings"
+      class="-mr-2 flex size-10 items-center justify-center rounded-full text-xl"
+    >
+      ⚙️
+    </RouterLink>
+  </div>
 
   <section class="mt-6 rounded-2xl bg-card p-6 text-center">
-    <p class="text-6xl font-bold tabular-nums">{{ formatNumber(summary?.totalKcal) }}</p>
-    <p class="mt-1 text-sm text-muted-foreground">kcal</p>
+    <p class="text-6xl font-bold tabular-nums" :class="statusColor(kcalOnTrack)">
+      {{ formatNumber(summary?.totalKcal) }}
+    </p>
+    <p class="mt-1 text-sm text-muted-foreground">
+      <template v-if="settings">
+        of {{ formatNumber(settings.kcalReference) }} kcal · {{ modeLabel }}
+      </template>
+      <template v-else>kcal</template>
+    </p>
+    <div v-if="settings" class="mt-4 h-2 overflow-hidden rounded-full bg-muted">
+      <div
+        class="h-full rounded-full transition-all"
+        :class="barColor(kcalOnTrack)"
+        :style="{ width: progress(summary?.totalKcal, settings.kcalReference) }"
+      />
+    </div>
   </section>
 
   <section class="mt-3 grid grid-cols-3 gap-3">
     <div class="rounded-2xl bg-card p-4 text-center">
-      <p class="text-2xl font-semibold tabular-nums">{{ formatNumber(summary?.totalProtein) }} g</p>
-      <p class="mt-1 text-xs text-muted-foreground">Protein</p>
+      <p class="text-2xl font-semibold tabular-nums" :class="statusColor(proteinOnTrack)">
+        {{ formatNumber(summary?.totalProtein) }} g
+      </p>
+      <p class="mt-1 text-xs text-muted-foreground">
+        Protein<template v-if="settings"> / {{ formatNumber(settings.proteinGoalG) }}</template>
+      </p>
+      <div v-if="settings" class="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
+        <div
+          class="h-full rounded-full transition-all"
+          :class="barColor(proteinOnTrack)"
+          :style="{ width: progress(summary?.totalProtein, settings.proteinGoalG) }"
+        />
+      </div>
     </div>
     <div class="rounded-2xl bg-card p-4 text-center">
       <p class="text-2xl font-semibold tabular-nums">{{ formatNumber(summary?.totalCarbs) }} g</p>
