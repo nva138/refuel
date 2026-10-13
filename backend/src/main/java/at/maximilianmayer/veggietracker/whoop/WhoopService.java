@@ -45,23 +45,48 @@ public class WhoopService {
         form.add("client_secret", whoopProperties.clientSecret());
         form.add("code", code);
 
-        WhoopTokenResponse response = restClient.post()
+        saveToken(requestToken(form));
+    }
+
+    public synchronized String getValidAccessToken() {
+        WhoopToken token = whoopTokenRepository.findAll().stream().findFirst()
+                .orElseThrow(() -> new IllegalStateException("WHOOP is not connected"));
+
+        if (token.getExpiresAt().isAfter(Instant.now().plusSeconds(60))) {
+            return token.getAccessToken();
+        }
+
+        MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
+
+        form.add("grant_type", "refresh_token");
+        form.add("refresh_token", token.getRefreshToken());
+        form.add("client_id", whoopProperties.clientId());
+        form.add("client_secret", whoopProperties.clientSecret());
+        form.add("scope", "offline");
+
+        return saveToken(requestToken(form)).getAccessToken();
+    }
+
+    private WhoopTokenResponse requestToken(MultiValueMap<String, String> form) {
+        return restClient.post()
                 .uri(TOKEN_URL)
                 .contentType(MediaType.APPLICATION_FORM_URLENCODED)
                 .body(form)
                 .retrieve()
                 .body(WhoopTokenResponse.class);
+    }
 
+    private WhoopToken saveToken(WhoopTokenResponse response) {
         Instant expiresAt = Instant.now().plusSeconds(response.expiresIn());
 
         WhoopToken token = whoopTokenRepository.findAll().stream().findFirst().orElse(null);
 
-        if(token == null) {
-        token = new WhoopToken(response.accessToken(), response.refreshToken(), expiresAt);
+        if (token == null) {
+            token = new WhoopToken(response.accessToken(), response.refreshToken(), expiresAt);
         } else {
             token.update(response.accessToken(), response.refreshToken(), expiresAt);
         }
 
-        whoopTokenRepository.save(token);
+        return whoopTokenRepository.save(token);
     }
 }
