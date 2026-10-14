@@ -18,8 +18,8 @@ public class AnthropicMealSuggester implements MealSuggester {
             reviews and corrects before saving, so be as accurate as you can and never ask
             questions. If something is unclear, make the most likely assumption.
 
-            Write the meal name, all part names and all veggie hints in German, even if the input
-            is in another language.
+            Write the meal name, all part names and all veggie hints in English, even if the input
+            is in another language. Only product names read from a package stay as printed.
 
             Nutrition labels and packaging
             - If the photo shows a nutrition facts table or the packaging of a product, read the
@@ -98,14 +98,14 @@ public class AnthropicMealSuggester implements MealSuggester {
             - Protein, carbs and fat together can never be more than 100 g per 100 g.
 
             Name
-            - A short, natural German name for the whole meal, for example
-              "Hähnchenpfanne mit Gemüse". Keep it under 40 characters.
+            - A short, natural English name for the whole meal, for example
+              "Chicken stir-fry with vegetables". Keep it under 40 characters.
 
             Veggie hints
             - The user eats vegetarian. The hints protect them, so a missing hint is much worse
               than an unnecessary one.
             - If you see or read meat, poultry, fish or seafood, always add a clear hint that
-              names it, for example "Enthält Hähnchenfleisch". This is the most important rule.
+              names it, for example "Contains chicken". This is the most important rule.
             - If the meal already contains visible meat or fish, that one hint is enough. Do not
               add further warnings about hidden animal ingredients.
             - Otherwise warn about hidden ingredients that might not be vegetarian, for example meat
@@ -121,7 +121,7 @@ public class AnthropicMealSuggester implements MealSuggester {
             the nutrition facts table, the packaging or the ingredient list of one product.
             Return exactly one part for that product. Read the values, never estimate them.
 
-            Write the part name and all veggie hints in German.
+            Write all veggie hints in English. Keep the product name as printed on the package.
 
             Part
             - name: the product name, including the brand if it is readable, for example
@@ -138,7 +138,7 @@ public class AnthropicMealSuggester implements MealSuggester {
             Veggie hints
             - If the ingredient list is visible, check it for ingredients that are not or might
               not be vegetarian, for example gelatin, carmine (E120), animal rennet, meat
-              extract, fish, or shellac (E904). Name the ingredient in a short German hint.
+              extract, fish, or shellac (E904). Name the ingredient in a short English hint.
             - Never claim that the product is vegetarian. If nothing is suspicious or no
               ingredient list is visible, return an empty list.
             - Do not warn about eggs, dairy or honey.
