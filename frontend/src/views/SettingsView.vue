@@ -2,7 +2,9 @@
 import { onMounted, reactive, ref } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import { fetchSettings, updateSettings } from '@/api/settings'
+import { fetchEnergy } from '@/api/whoop'
 import type { Settings } from '@/types/settings'
+import type { Energy } from '@/types/whoop'
 
 type Mode = Settings['mode']
 
@@ -20,15 +22,28 @@ const form = reactive({
   kcalReference: '',
 })
 const proteinGoalG = ref<number | null>(null)
+const energy = ref<Energy | null>(null)
+const energyChecked = ref(false)
 const loading = ref(true)
 const saving = ref(false)
 const error = ref<string | null>(null)
+
+const number = new Intl.NumberFormat('de-AT', { maximumFractionDigits: 0 })
+
+function formatNumber(value: number): string {
+  return number.format(value)
+}
 
 function toNumber(value: string): number {
   return Number(value.replace(',', '.'))
 }
 
 onMounted(async () => {
+  fetchEnergy()
+    .then((currentEnergy) => (energy.value = currentEnergy))
+    .catch(() => (energy.value = null))
+    .finally(() => (energyChecked.value = true))
+
   try {
     const settings = await fetchSettings()
     form.mode = settings.mode
@@ -106,14 +121,39 @@ const inputClass =
         Protein goal: {{ Math.round(toNumber(form.bodyWeightKg) * 2) || proteinGoalG }} g (2 g per
         kg)
       </p>
+    </section>
 
-      <label class="block">
-        <span class="text-sm text-muted-foreground">Weekly average burn (kcal per day)</span>
-        <input v-model="form.kcalReference" :class="inputClass" class="mt-1" inputmode="numeric" />
-      </label>
-      <p class="text-xs text-muted-foreground">
-        Take it from the WHOOP app for now. It will come from WHOOP automatically later.
-      </p>
+    <section v-if="energyChecked" class="space-y-2">
+      <h2 class="text-sm font-medium text-muted-foreground">WHOOP</h2>
+
+      <div v-if="energy" class="rounded-xl border border-emerald-400/40 bg-emerald-400/10 p-4">
+        <p class="font-medium text-emerald-400">✓ Connected</p>
+        <p class="mt-1 text-sm text-muted-foreground">
+          Average burn {{ formatNumber(energy.weeklyAverageKcal) }} kcal per day over the last 7
+          days. This is your daily goal now.
+        </p>
+      </div>
+
+      <template v-else>
+        <a
+          href="/api/whoop/login"
+          class="block w-full rounded-xl border border-border py-3 text-center font-medium"
+        >
+          Connect WHOOP
+        </a>
+
+        <label class="block">
+          <span class="text-sm text-muted-foreground"
+            >Or enter your average burn (kcal per day)</span
+          >
+          <input
+            v-model="form.kcalReference"
+            :class="inputClass"
+            class="mt-1"
+            inputmode="numeric"
+          />
+        </label>
+      </template>
     </section>
 
     <p v-if="error" class="text-sm text-destructive">{{ error }}</p>

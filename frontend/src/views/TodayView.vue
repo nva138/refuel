@@ -3,25 +3,35 @@ import { computed, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import { deleteMeal, fetchToday } from '@/api/meals'
 import { fetchSettings } from '@/api/settings'
+import { fetchEnergy } from '@/api/whoop'
 import type { DaySummary, Meal } from '@/types/meal'
 import type { Settings } from '@/types/settings'
+import type { Energy } from '@/types/whoop'
 
 const MAINTAIN_TOLERANCE = 0.05
 
 const summary = ref<DaySummary | null>(null)
 const settings = ref<Settings | null>(null)
+const energy = ref<Energy | null>(null)
 const deletingId = ref<number | null>(null)
 
 async function load() {
-  const [today, currentSettings] = await Promise.all([fetchToday(), fetchSettings()])
+  const [today, currentSettings, currentEnergy] = await Promise.all([
+    fetchToday(),
+    fetchSettings(),
+    fetchEnergy().catch(() => null),
+  ])
   summary.value = today
   settings.value = currentSettings
+  energy.value = currentEnergy
 }
 
+const kcalGoal = computed(() => energy.value?.weeklyAverageKcal ?? settings.value?.kcalReference)
+
 const kcalOnTrack = computed(() => {
-  if (!summary.value || !settings.value) return null
+  if (!summary.value || !settings.value || kcalGoal.value === undefined) return null
   const eaten = summary.value.totalKcal
-  const reference = settings.value.kcalReference
+  const reference = kcalGoal.value
   switch (settings.value.mode) {
     case 'CUT':
       return eaten <= reference
@@ -117,18 +127,19 @@ function mealKcal(meal: Meal): number {
       {{ formatNumber(summary?.totalKcal) }}
     </p>
     <p class="mt-1 text-sm text-muted-foreground">
-      <template v-if="settings">
-        of {{ formatNumber(settings.kcalReference) }} kcal · {{ modeLabel }}
-      </template>
+      <template v-if="settings"> of {{ formatNumber(kcalGoal) }} kcal · {{ modeLabel }} </template>
       <template v-else>kcal</template>
     </p>
     <div v-if="settings" class="mt-4 h-2 overflow-hidden rounded-full bg-muted">
       <div
         class="h-full rounded-full transition-all"
         :class="barColor(kcalOnTrack)"
-        :style="{ width: progress(summary?.totalKcal, settings.kcalReference) }"
+        :style="{ width: progress(summary?.totalKcal, kcalGoal) }"
       />
     </div>
+    <p v-if="energy" class="mt-3 text-sm text-muted-foreground">
+      🔥 {{ formatNumber(energy.todayKcal) }} kcal burned today
+    </p>
   </section>
 
   <section class="mt-3 grid grid-cols-3 gap-3">

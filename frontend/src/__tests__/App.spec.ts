@@ -21,25 +21,53 @@ const responses: Record<string, unknown> = {
   },
 }
 
+function stubFetch(energy: unknown) {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn((url: string) => {
+      if (url === '/api/whoop/energy') {
+        return Promise.resolve(
+          energy
+            ? { ok: true, status: 200, json: async () => energy }
+            : { ok: false, status: 409, json: async () => ({}) },
+        )
+      }
+      return Promise.resolve({ ok: true, status: 200, json: async () => responses[url] })
+    }),
+  )
+}
+
+async function mountToday() {
+  router.push('/')
+  await router.isReady()
+  const wrapper = mount(App, { global: { plugins: [router] } })
+  await flushPromises()
+  return wrapper
+}
+
 describe('App', () => {
   afterEach(() => {
     vi.unstubAllGlobals()
   })
 
-  it('renders today against the goals from the settings', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn((url: string) => Promise.resolve({ ok: true, json: async () => responses[url] })),
-    )
-    router.push('/')
-    await router.isReady()
+  it('uses the manual burn as goal when whoop is not connected', async () => {
+    stubFetch(null)
 
-    const wrapper = mount(App, { global: { plugins: [router] } })
-    await flushPromises()
+    const wrapper = await mountToday()
 
     expect(wrapper.text()).toContain('Today')
     expect(wrapper.text()).toContain('535')
     expect(wrapper.text()).toMatch(/of 2\D?700 kcal/)
     expect(wrapper.text()).toContain('Bulk')
+    expect(wrapper.text()).not.toContain('burned today')
+  })
+
+  it('uses the whoop weekly average as goal when connected', async () => {
+    stubFetch({ weeklyAverageKcal: 2301, todayKcal: 915 })
+
+    const wrapper = await mountToday()
+
+    expect(wrapper.text()).toMatch(/of 2\D?301 kcal/)
+    expect(wrapper.text()).toContain('915 kcal burned today')
   })
 })
