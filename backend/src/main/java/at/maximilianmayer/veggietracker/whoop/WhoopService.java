@@ -53,7 +53,7 @@ public class WhoopService {
 
     public synchronized String getValidAccessToken() {
         WhoopToken token = whoopTokenRepository.findAll().stream().findFirst()
-                .orElseThrow(() -> new IllegalStateException("WHOOP is not connected"));
+                .orElseThrow(() -> new WhoopNotConnectedException());
 
         if (token.getExpiresAt().isAfter(Instant.now().plusSeconds(60))) {
             return token.getAccessToken();
