@@ -8,12 +8,13 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 
 @Service
 public class WhoopService {
 
     private static final String TOKEN_URL = "https://api.prod.whoop.com/oauth/oauth2/token";
-    private static final String CYCLE_URL = "https://api.prod.whoop.com/developer/v2/cycle?limit=8";
+    private static final String CYCLE_URL = "https://api.prod.whoop.com/developer/v2/cycle?limit=25";
     private static final double KJ_PER_KCAL = 4.184;
 
     private final WhoopTokenRepository whoopTokenRepository;
@@ -102,6 +103,7 @@ public class WhoopService {
         double todayKj = 0;
         double weekKj = 0;
         int weekDays = 0;
+        Instant weekStart = Instant.now().minus(7, ChronoUnit.DAYS);
 
         for(WhoopCycle cycle : response.records()) {
             if (!"SCORED".equals(cycle.scoreState())) {
@@ -109,7 +111,7 @@ public class WhoopService {
             }
             if(cycle.end() == null) {
                 todayKj = cycle.score().kilojoule();
-            } else {
+            } else if (cycle.start().isAfter(weekStart)) {
                 weekKj += cycle.score().kilojoule();
                 weekDays++;
             }
