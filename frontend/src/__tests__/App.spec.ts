@@ -59,7 +59,7 @@ describe('App', () => {
     expect(wrapper.text()).toContain('535')
     expect(wrapper.text()).toMatch(/of 2\D?700 kcal/)
     expect(wrapper.text()).toContain('Bulk')
-    expect(wrapper.text()).not.toContain('burned today')
+    expect(wrapper.text()).not.toContain('Burned')
   })
 
   it('uses the whoop weekly average as goal when connected', async () => {
@@ -68,6 +68,7 @@ describe('App', () => {
     const wrapper = await mountToday()
 
     expect(wrapper.text()).toMatch(/of 2\D?301 kcal/)
-    expect(wrapper.text()).toContain('915 kcal burned today')
+    expect(wrapper.text()).toContain('Burned')
+    expect(wrapper.text()).toContain('915')
   })
 })

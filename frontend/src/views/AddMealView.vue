@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, reactive, ref } from 'vue'
-import { RouterLink, useRouter } from 'vue-router'
+import { useRouter } from 'vue-router'
+import { Camera, Plus, ScanLine, Sparkles, TriangleAlert, X } from '@lucide/vue'
+import PageHeader from '@/components/PageHeader.vue'
 import { createMeal, readLabel, suggestMeal, suggestMealFromPhoto } from '@/api/meals'
 import type { CreateMealPartRequest, CreateMealRequest, SuggestMealResponse } from '@/types/meal'
 
@@ -248,23 +250,21 @@ async function save() {
 }
 
 const inputClass =
-  'w-full rounded-xl border border-input bg-background px-3 py-2.5 text-base outline-none focus:border-ring'
+  'w-full rounded-xl bg-white/6 px-3.5 py-3 text-base outline-none ring-1 ring-white/10 placeholder:text-muted-foreground/60 focus:ring-white/40'
+const numberInputClass = `${inputClass} figure text-lg`
 </script>
 
 <template>
-  <div class="flex items-center gap-3">
-    <RouterLink :to="{ name: 'today' }" class="-ml-2 rounded-full px-2 py-1 text-2xl">←</RouterLink>
-    <h1 class="text-2xl font-semibold">Add meal</h1>
-  </div>
+  <PageHeader title="Add meal" />
 
-  <form class="mt-6 space-y-6 pb-28" @submit.prevent="save">
+  <form class="mt-8 space-y-3 pb-32" @submit.prevent="save">
     <section class="space-y-3 rounded-2xl bg-card p-4">
       <label class="block">
-        <span class="text-sm text-muted-foreground">What did you eat?</span>
+        <span class="caps text-xs text-muted-foreground">What did you eat?</span>
         <textarea
           v-model="form.enteredText"
           :class="inputClass"
-          class="mt-1"
+          class="mt-3 resize-none"
           rows="3"
           placeholder="2 eggs and a slice of wholegrain bread with butter"
         />
@@ -279,10 +279,10 @@ const inputClass =
         <button
           type="button"
           aria-label="Remove photo"
-          class="absolute top-2 right-2 flex size-8 items-center justify-center rounded-full bg-background/80 text-sm"
+          class="absolute top-2 right-2 flex size-9 items-center justify-center rounded-full bg-black/60 backdrop-blur"
           @click="removePhoto"
         >
-          ✕
+          <X class="size-4" />
         </button>
       </div>
 
@@ -297,17 +297,19 @@ const inputClass =
       <div class="grid grid-cols-2 gap-3">
         <button
           type="button"
-          class="rounded-xl border border-border py-2.5 font-medium"
+          class="caps flex items-center justify-center gap-2 rounded-xl bg-white/8 py-3.5 text-sm"
           @click="photoInput?.click()"
         >
-          {{ photo ? 'Change photo' : '📷 Photo' }}
+          <Camera class="size-5" />
+          {{ photo ? 'Change' : 'Photo' }}
         </button>
         <button
           type="button"
           :disabled="suggesting"
-          class="rounded-xl border border-emerald-400/60 py-2.5 font-medium text-emerald-400 disabled:opacity-50"
+          class="caps flex items-center justify-center gap-2 rounded-xl bg-emerald-400/15 py-3.5 text-sm text-emerald-400 disabled:opacity-50"
           @click="suggest"
         >
+          <Sparkles class="size-5" :class="{ 'animate-pulse': suggesting }" />
           {{ suggesting ? 'Thinking…' : 'Suggest' }}
         </button>
       </div>
@@ -315,45 +317,46 @@ const inputClass =
 
     <section
       v-if="veggieHints.length > 0"
-      class="space-y-1 rounded-2xl border border-amber-400/40 bg-amber-400/10 p-4 text-sm text-amber-200"
+      class="space-y-1.5 rounded-2xl bg-amber-400/10 p-4 text-sm text-amber-200 ring-1 ring-amber-400/30"
     >
-      <p class="font-medium">Might not be vegetarian</p>
+      <p class="caps flex items-center gap-2 text-xs text-amber-300">
+        <TriangleAlert class="size-4" />
+        Might not be vegetarian
+      </p>
       <p v-for="hint in veggieHints" :key="hint">{{ hint }}</p>
     </section>
 
-    <section class="space-y-3">
-      <label class="block">
-        <span class="text-sm text-muted-foreground">Name</span>
-        <input v-model="form.name" :class="inputClass" class="mt-1" placeholder="Lunch" />
-      </label>
+    <section class="rounded-2xl bg-card p-4">
+      <p class="caps text-xs text-muted-foreground">Total</p>
+      <p class="figure mt-1 text-5xl">
+        {{ wholeNumber.format(totals.kcal) }}
+        <span class="text-lg font-medium text-muted-foreground">kcal</span>
+      </p>
+      <div class="mt-4 grid grid-cols-3 gap-2 border-t border-white/8 pt-3">
+        <div>
+          <p class="figure text-xl">{{ wholeNumber.format(totals.protein) }} g</p>
+          <p class="caps mt-0.5 text-[11px] text-muted-foreground">Protein</p>
+        </div>
+        <div>
+          <p class="figure text-xl">{{ wholeNumber.format(totals.carbs) }} g</p>
+          <p class="caps mt-0.5 text-[11px] text-muted-foreground">Carbs</p>
+        </div>
+        <div>
+          <p class="figure text-xl">{{ wholeNumber.format(totals.fat) }} g</p>
+          <p class="caps mt-0.5 text-[11px] text-muted-foreground">Fat</p>
+        </div>
+      </div>
     </section>
 
     <section class="rounded-2xl bg-card p-4">
-      <div class="flex items-baseline justify-between">
-        <span class="text-sm text-muted-foreground">Total</span>
-        <span class="text-3xl font-bold tabular-nums">
-          {{ wholeNumber.format(totals.kcal) }}
-          <span class="text-sm font-normal text-muted-foreground">kcal</span>
-        </span>
-      </div>
-      <div class="mt-3 grid grid-cols-3 gap-2 text-center">
-        <div>
-          <p class="font-semibold tabular-nums">{{ wholeNumber.format(totals.protein) }} g</p>
-          <p class="text-xs text-muted-foreground">Protein</p>
-        </div>
-        <div>
-          <p class="font-semibold tabular-nums">{{ wholeNumber.format(totals.carbs) }} g</p>
-          <p class="text-xs text-muted-foreground">Carbs</p>
-        </div>
-        <div>
-          <p class="font-semibold tabular-nums">{{ wholeNumber.format(totals.fat) }} g</p>
-          <p class="text-xs text-muted-foreground">Fat</p>
-        </div>
-      </div>
+      <label class="block">
+        <span class="caps text-xs text-muted-foreground">Name</span>
+        <input v-model="form.name" :class="inputClass" class="mt-3" placeholder="Lunch" />
+      </label>
     </section>
 
-    <section class="space-y-3">
-      <h2 class="text-sm font-medium text-muted-foreground">Parts</h2>
+    <section class="space-y-3 pt-5">
+      <h2 class="text-2xl font-semibold">Parts</h2>
 
       <input
         ref="labelInput"
@@ -366,96 +369,105 @@ const inputClass =
       <div
         v-for="(part, index) in form.parts"
         :key="index"
-        class="space-y-3 rounded-2xl bg-card p-4"
+        class="space-y-4 rounded-2xl bg-card p-4"
       >
-        <div class="flex gap-3">
+        <div class="flex gap-2">
           <input v-model="part.name" :class="inputClass" placeholder="Rice" />
           <button
             type="button"
             :aria-label="`Read nutrition label for part ${index + 1}`"
             :disabled="readingIndex !== null"
-            class="shrink-0 rounded-xl border border-border px-3 disabled:opacity-50"
+            class="flex w-12 shrink-0 items-center justify-center rounded-xl bg-white/8 disabled:opacity-50"
             @click="chooseLabelPhoto(index)"
           >
-            {{ readingIndex === index ? '…' : '📷' }}
+            <ScanLine class="size-5" :class="{ 'animate-pulse': readingIndex === index }" />
           </button>
           <button
             v-if="form.parts.length > 1"
             type="button"
-            class="shrink-0 rounded-xl px-3 text-muted-foreground"
+            :aria-label="`Remove part ${index + 1}`"
+            class="flex w-10 shrink-0 items-center justify-center rounded-xl text-muted-foreground"
             @click="removePart(index)"
           >
-            ✕
+            <X class="size-5" />
           </button>
         </div>
 
         <label class="block">
-          <span class="text-xs text-muted-foreground">Amount (g)</span>
+          <span class="caps text-[11px] text-muted-foreground">Amount (g)</span>
           <input
             v-model="part.amountG"
-            :class="inputClass"
-            class="mt-1"
+            :class="numberInputClass"
+            class="mt-2"
             inputmode="decimal"
             placeholder="200"
           />
         </label>
 
-        <p class="text-xs text-muted-foreground">Per 100 g</p>
-        <div class="grid grid-cols-2 gap-3">
-          <label>
-            <span class="text-xs text-muted-foreground">kcal</span>
-            <input
-              v-model="part.kcalPer100g"
-              :class="inputClass"
-              class="mt-1"
-              inputmode="decimal"
-            />
-          </label>
-          <label>
-            <span class="text-xs text-muted-foreground">Protein (g)</span>
-            <input
-              v-model="part.proteinPer100g"
-              :class="inputClass"
-              class="mt-1"
-              inputmode="decimal"
-            />
-          </label>
-          <label>
-            <span class="text-xs text-muted-foreground">Carbs (g)</span>
-            <input
-              v-model="part.carbsPer100g"
-              :class="inputClass"
-              class="mt-1"
-              inputmode="decimal"
-            />
-          </label>
-          <label>
-            <span class="text-xs text-muted-foreground">Fat (g)</span>
-            <input v-model="part.fatPer100g" :class="inputClass" class="mt-1" inputmode="decimal" />
-          </label>
+        <div>
+          <p class="caps text-[11px] text-muted-foreground">Per 100 g</p>
+          <div class="mt-2 grid grid-cols-2 gap-3">
+            <label>
+              <span class="text-xs text-muted-foreground">kcal</span>
+              <input
+                v-model="part.kcalPer100g"
+                :class="numberInputClass"
+                class="mt-1"
+                inputmode="decimal"
+              />
+            </label>
+            <label>
+              <span class="text-xs text-muted-foreground">Protein (g)</span>
+              <input
+                v-model="part.proteinPer100g"
+                :class="numberInputClass"
+                class="mt-1"
+                inputmode="decimal"
+              />
+            </label>
+            <label>
+              <span class="text-xs text-muted-foreground">Carbs (g)</span>
+              <input
+                v-model="part.carbsPer100g"
+                :class="numberInputClass"
+                class="mt-1"
+                inputmode="decimal"
+              />
+            </label>
+            <label>
+              <span class="text-xs text-muted-foreground">Fat (g)</span>
+              <input
+                v-model="part.fatPer100g"
+                :class="numberInputClass"
+                class="mt-1"
+                inputmode="decimal"
+              />
+            </label>
+          </div>
         </div>
       </div>
 
       <button
         type="button"
-        class="w-full rounded-2xl border border-dashed border-border py-3 text-sm text-muted-foreground"
+        class="caps flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-white/15 py-3.5 text-sm text-muted-foreground"
         @click="addPart"
       >
-        + Add part
+        <Plus class="size-4" />
+        Add part
       </button>
     </section>
 
     <p v-if="error" class="text-sm text-destructive">{{ error }}</p>
 
     <div
-      class="fixed inset-x-0 bottom-0 mx-auto max-w-md bg-background/90 px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] backdrop-blur"
+      class="fixed inset-x-0 bottom-0 mx-auto max-w-md bg-gradient-to-t from-background via-background/80 to-transparent px-4 pt-10 pb-[max(1.25rem,env(safe-area-inset-bottom))]"
     >
       <button
         type="submit"
         :disabled="saving"
-        class="w-full rounded-2xl bg-emerald-400 py-3.5 font-semibold text-zinc-950 disabled:opacity-50"
+        class="caps w-full rounded-full bg-white py-4 text-sm text-zinc-950 disabled:opacity-50"
       >
-        {{ saving ? 'Saving…' : 'Save' }}
+        {{ saving ? 'Saving…' : 'Save meal' }}
       </button>
     </div>
   </form>

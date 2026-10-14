@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue'
-import { RouterLink, useRouter } from 'vue-router'
+import { useRouter } from 'vue-router'
+import { Check } from '@lucide/vue'
+import PageHeader from '@/components/PageHeader.vue'
 import { fetchSettings, updateSettings } from '@/api/settings'
 import { fetchEnergy } from '@/api/whoop'
 import type { Settings } from '@/types/settings'
@@ -78,78 +80,86 @@ async function save() {
 }
 
 const inputClass =
-  'w-full rounded-xl border border-input bg-background px-3 py-2.5 text-base outline-none focus:border-ring'
+  'figure w-full rounded-xl bg-white/6 px-4 py-3 text-xl outline-none ring-1 ring-white/10 focus:ring-white/40'
 </script>
 
 <template>
-  <div class="flex items-center gap-3">
-    <RouterLink :to="{ name: 'today' }" class="-ml-2 rounded-full px-2 py-1 text-2xl">←</RouterLink>
-    <h1 class="text-2xl font-semibold">Settings</h1>
-  </div>
+  <PageHeader title="Settings" />
 
-  <form v-if="!loading" class="mt-6 space-y-6 pb-28" @submit.prevent="save">
-    <section class="space-y-2">
-      <h2 class="text-sm font-medium text-muted-foreground">Goal</h2>
-      <div class="grid grid-cols-3 gap-2">
+  <form v-if="!loading" class="mt-8 space-y-3 pb-32" @submit.prevent="save">
+    <section class="rounded-2xl bg-card p-4">
+      <h2 class="caps text-xs text-muted-foreground">Goal</h2>
+      <div class="mt-3 grid grid-cols-3 gap-1 rounded-xl bg-black/25 p-1">
         <button
           v-for="mode in modes"
           :key="mode.value"
           type="button"
           :aria-pressed="form.mode === mode.value"
-          class="rounded-xl border py-3 font-medium"
+          class="caps rounded-lg py-2.5 text-sm transition-colors"
           :class="
-            form.mode === mode.value
-              ? 'border-emerald-400 bg-emerald-400/10 text-emerald-400'
-              : 'border-border'
+            form.mode === mode.value ? 'bg-white/12 text-foreground' : 'text-muted-foreground'
           "
           @click="form.mode = mode.value"
         >
           {{ mode.label }}
         </button>
       </div>
-      <p class="text-xs text-muted-foreground">
+      <p class="mt-3 text-sm text-muted-foreground">
         {{ modes.find((mode) => mode.value === form.mode)?.hint }}
       </p>
     </section>
 
-    <section class="space-y-3">
+    <section class="rounded-2xl bg-card p-4">
       <label class="block">
-        <span class="text-sm text-muted-foreground">Body weight (kg)</span>
-        <input v-model="form.bodyWeightKg" :class="inputClass" class="mt-1" inputmode="decimal" />
+        <span class="caps text-xs text-muted-foreground">Body weight (kg)</span>
+        <input v-model="form.bodyWeightKg" :class="inputClass" class="mt-3" inputmode="decimal" />
       </label>
-      <p v-if="proteinGoalG !== null" class="text-xs text-muted-foreground">
-        Protein goal: {{ Math.round(toNumber(form.bodyWeightKg) * 2) || proteinGoalG }} g (2 g per
-        kg)
+      <p v-if="proteinGoalG !== null" class="mt-3 text-sm text-muted-foreground">
+        Protein goal
+        <span class="figure text-foreground"
+          >{{ Math.round(toNumber(form.bodyWeightKg) * 2) || proteinGoalG }} g</span
+        >
+        · 2 g per kg
       </p>
     </section>
 
-    <section v-if="energyChecked" class="space-y-2">
-      <h2 class="text-sm font-medium text-muted-foreground">WHOOP</h2>
+    <section v-if="energyChecked" class="rounded-2xl bg-card p-4">
+      <h2 class="caps text-xs text-muted-foreground">WHOOP</h2>
 
-      <div v-if="energy" class="rounded-xl border border-emerald-400/40 bg-emerald-400/10 p-4">
-        <p class="font-medium text-emerald-400">✓ Connected</p>
-        <p class="mt-1 text-sm text-muted-foreground">
-          Average burn {{ formatNumber(energy.weeklyAverageKcal) }} kcal per day over the last 7
-          days. This is your daily goal now.
-        </p>
+      <div v-if="energy" class="mt-3 flex items-center gap-4">
+        <span
+          class="flex size-11 shrink-0 items-center justify-center rounded-xl bg-emerald-400/15 text-emerald-400"
+        >
+          <Check class="size-5" />
+        </span>
+        <div>
+          <p class="caps text-sm text-emerald-400">Connected</p>
+          <p class="mt-0.5 text-sm text-muted-foreground">
+            Ø
+            <span class="figure text-foreground"
+              >{{ formatNumber(energy.weeklyAverageKcal) }} kcal</span
+            >
+            per day, last 7 days
+          </p>
+        </div>
       </div>
 
       <template v-else>
         <a
           href="/api/whoop/login"
-          class="block w-full rounded-xl border border-border py-3 text-center font-medium"
+          class="caps mt-3 block w-full rounded-xl bg-white/8 py-3.5 text-center text-sm"
         >
           Connect WHOOP
         </a>
 
-        <label class="block">
+        <label class="mt-4 block">
           <span class="text-sm text-muted-foreground"
             >Or enter your average burn (kcal per day)</span
           >
           <input
             v-model="form.kcalReference"
             :class="inputClass"
-            class="mt-1"
+            class="mt-2"
             inputmode="numeric"
           />
         </label>
@@ -159,12 +169,12 @@ const inputClass =
     <p v-if="error" class="text-sm text-destructive">{{ error }}</p>
 
     <div
-      class="fixed inset-x-0 bottom-0 mx-auto max-w-md bg-background/90 px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] backdrop-blur"
+      class="fixed inset-x-0 bottom-0 mx-auto max-w-md bg-gradient-to-t from-background via-background/80 to-transparent px-4 pt-10 pb-[max(1.25rem,env(safe-area-inset-bottom))]"
     >
       <button
         type="submit"
         :disabled="saving"
-        class="w-full rounded-2xl bg-emerald-400 py-3.5 font-semibold text-zinc-950 disabled:opacity-50"
+        class="caps w-full rounded-full bg-white py-4 text-sm text-zinc-950 disabled:opacity-50"
       >
         {{ saving ? 'Saving…' : 'Save' }}
       </button>

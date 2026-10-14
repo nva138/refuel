@@ -1,6 +1,17 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
+import {
+  Check,
+  Flame,
+  Plus,
+  Settings as SettingsIcon,
+  TriangleAlert,
+  Wheat,
+  Droplet,
+  X,
+} from '@lucide/vue'
+import ProgressRing from '@/components/ProgressRing.vue'
 import { deleteMeal, fetchToday } from '@/api/meals'
 import { fetchSettings } from '@/api/settings'
 import { fetchEnergy } from '@/api/whoop'
@@ -65,15 +76,29 @@ function statusColor(onTrack: boolean | null): string {
   return onTrack ? 'text-emerald-400' : 'text-red-400'
 }
 
-function barColor(onTrack: boolean | null): string {
-  if (onTrack === null) return 'bg-muted-foreground'
-  return onTrack ? 'bg-emerald-400' : 'bg-red-400'
+function ringColor(onTrack: boolean | null): string {
+  if (onTrack === null) return 'stroke-white/30'
+  return onTrack ? 'stroke-emerald-400' : 'stroke-red-400'
 }
 
-function progress(value: number | undefined, goal: number | undefined): string {
-  if (!value || !goal) return '0%'
-  return `${Math.min(100, (value / goal) * 100)}%`
+function ratio(value: number | undefined, goal: number | undefined): number {
+  if (!value || !goal) return 0
+  return value / goal
 }
+
+const kcalStatus = computed(() => {
+  if (!summary.value || !settings.value || kcalGoal.value === undefined) return null
+  const difference = Math.round(kcalGoal.value - summary.value.totalKcal)
+  const left = formatNumber(Math.abs(difference))
+  if (kcalOnTrack.value) {
+    return settings.value.mode === 'CUT' ? `${left} kcal left` : 'On target'
+  }
+  return difference > 0 ? `${left} kcal to go` : `${left} kcal over`
+})
+
+const goalSource = computed(() =>
+  energy.value ? 'Goal from WHOOP, last 7 days' : 'Goal from your settings',
+)
 
 onMounted(load)
 
@@ -111,102 +136,167 @@ function mealKcal(meal: Meal): number {
 </script>
 
 <template>
-  <div class="flex items-center justify-between">
-    <h1 class="text-2xl font-semibold">Today</h1>
+  <header class="grid grid-cols-[2.5rem_1fr_2.5rem] items-center">
+    <span />
+    <p class="caps justify-self-center rounded-full bg-white/8 px-6 py-2 text-sm">Today</p>
     <RouterLink
       :to="{ name: 'settings' }"
       aria-label="Settings"
-      class="-mr-2 flex size-10 items-center justify-center rounded-full text-xl"
+      class="flex size-10 items-center justify-center rounded-full text-muted-foreground"
     >
-      ⚙️
+      <SettingsIcon class="size-6" />
     </RouterLink>
-  </div>
+  </header>
 
-  <section class="mt-6 rounded-2xl bg-card p-6 text-center">
-    <p class="text-6xl font-bold tabular-nums" :class="statusColor(kcalOnTrack)">
-      {{ formatNumber(summary?.totalKcal) }}
-    </p>
-    <p class="mt-1 text-sm text-muted-foreground">
-      <template v-if="settings"> of {{ formatNumber(kcalGoal) }} kcal · {{ modeLabel }} </template>
-      <template v-else>kcal</template>
-    </p>
-    <div v-if="settings" class="mt-4 h-2 overflow-hidden rounded-full bg-muted">
-      <div
-        class="h-full rounded-full transition-all"
-        :class="barColor(kcalOnTrack)"
-        :style="{ width: progress(summary?.totalKcal, kcalGoal) }"
-      />
+  <section
+    class="mt-8 flex items-end"
+    :class="energy ? 'justify-between' : 'justify-center gap-10'"
+  >
+    <div class="flex w-24 flex-col items-center">
+      <ProgressRing
+        :progress="ratio(summary?.totalProtein, settings?.proteinGoalG)"
+        :color-class="ringColor(proteinOnTrack)"
+        :size="92"
+        :stroke="6"
+      >
+        <span class="figure text-2xl">{{ formatNumber(summary?.totalProtein) }}</span>
+        <span class="text-[11px] text-muted-foreground">g</span>
+      </ProgressRing>
+      <p class="caps mt-3 text-xs">Protein</p>
+      <p v-if="settings" class="mt-0.5 text-xs text-muted-foreground">
+        of {{ formatNumber(settings.proteinGoalG) }} g
+      </p>
     </div>
-    <p v-if="energy" class="mt-3 text-sm text-muted-foreground">
-      🔥 {{ formatNumber(energy.todayKcal) }} kcal burned today
-    </p>
+
+    <div class="flex flex-col items-center">
+      <ProgressRing
+        :progress="ratio(summary?.totalKcal, kcalGoal)"
+        :color-class="ringColor(kcalOnTrack)"
+        :size="132"
+        :stroke="8"
+      >
+        <span class="figure text-[2.5rem] leading-none">{{
+          formatNumber(summary?.totalKcal)
+        }}</span>
+        <span v-if="kcalGoal !== undefined" class="mt-1 text-xs text-muted-foreground">
+          of {{ formatNumber(kcalGoal) }} kcal
+        </span>
+      </ProgressRing>
+      <p class="caps mt-3 text-xs">Calories</p>
+      <p v-if="settings" class="mt-0.5 text-xs text-muted-foreground">{{ modeLabel }}</p>
+    </div>
+
+    <div v-if="energy" class="flex w-24 flex-col items-center">
+      <ProgressRing
+        :progress="ratio(energy.todayKcal, energy.weeklyAverageKcal)"
+        color-class="stroke-orange-400"
+        :size="92"
+        :stroke="6"
+      >
+        <span class="figure text-2xl">{{ formatNumber(energy.todayKcal) }}</span>
+        <span class="text-[11px] text-muted-foreground">kcal</span>
+      </ProgressRing>
+      <p class="caps mt-3 text-xs">Burned</p>
+      <p class="mt-0.5 text-xs text-muted-foreground">today</p>
+    </div>
   </section>
 
-  <section class="mt-3 grid grid-cols-3 gap-3">
-    <div class="rounded-2xl bg-card p-4 text-center">
-      <p class="text-2xl font-semibold tabular-nums" :class="statusColor(proteinOnTrack)">
-        {{ formatNumber(summary?.totalProtein) }} g
+  <section v-if="kcalStatus" class="mt-8 flex items-center gap-4 rounded-2xl bg-card p-4">
+    <span
+      class="flex size-11 shrink-0 items-center justify-center rounded-xl"
+      :class="kcalOnTrack ? 'bg-emerald-400/15 text-emerald-400' : 'bg-red-400/15 text-red-400'"
+    >
+      <Check v-if="kcalOnTrack" class="size-5" />
+      <Flame v-else class="size-5" />
+    </span>
+    <div class="min-w-0">
+      <p class="caps text-sm" :class="statusColor(kcalOnTrack)">{{ kcalStatus }}</p>
+      <p class="mt-0.5 truncate text-sm text-muted-foreground">
+        {{ goalSource }}
       </p>
-      <p class="mt-1 text-xs text-muted-foreground">
-        Protein<template v-if="settings"> / {{ formatNumber(settings.proteinGoalG) }}</template>
-      </p>
-      <div v-if="settings" class="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
-        <div
-          class="h-full rounded-full transition-all"
-          :class="barColor(proteinOnTrack)"
-          :style="{ width: progress(summary?.totalProtein, settings.proteinGoalG) }"
-        />
-      </div>
-    </div>
-    <div class="rounded-2xl bg-card p-4 text-center">
-      <p class="text-2xl font-semibold tabular-nums">{{ formatNumber(summary?.totalCarbs) }} g</p>
-      <p class="mt-1 text-xs text-muted-foreground">Carbs</p>
-    </div>
-    <div class="rounded-2xl bg-card p-4 text-center">
-      <p class="text-2xl font-semibold tabular-nums">{{ formatNumber(summary?.totalFat) }} g</p>
-      <p class="mt-1 text-xs text-muted-foreground">Fat</p>
     </div>
   </section>
 
-  <section class="mt-8 pb-24">
-    <h2 class="text-sm font-medium text-muted-foreground">Meals</h2>
+  <section class="mt-3 grid grid-cols-2 gap-3">
+    <div class="rounded-2xl bg-card px-4 py-3.5">
+      <p class="caps flex items-center gap-2 text-xs text-muted-foreground">
+        <Wheat class="size-4" />
+        Carbs
+      </p>
+      <p class="figure mt-1 text-2xl">
+        {{ formatNumber(summary?.totalCarbs) }}
+        <span class="text-sm font-medium text-muted-foreground">g</span>
+      </p>
+    </div>
+    <div class="rounded-2xl bg-card px-4 py-3.5">
+      <p class="caps flex items-center gap-2 text-xs text-muted-foreground">
+        <Droplet class="size-4" />
+        Fat
+      </p>
+      <p class="figure mt-1 text-2xl">
+        {{ formatNumber(summary?.totalFat) }}
+        <span class="text-sm font-medium text-muted-foreground">g</span>
+      </p>
+    </div>
+  </section>
 
-    <p v-if="summary && summary.meals.length === 0" class="mt-3 text-sm text-muted-foreground">
-      Nothing logged yet today.
-    </p>
+  <section class="mt-8 pb-32">
+    <h2 class="text-2xl font-semibold">Meals</h2>
 
-    <ul class="mt-3 space-y-2">
-      <li v-for="meal in summary?.meals" :key="meal.id" class="rounded-2xl bg-card px-4 py-3">
-        <div class="flex items-center justify-between gap-3">
-          <div>
-            <p class="font-medium">{{ meal.name }}</p>
-            <p class="text-xs text-muted-foreground">{{ formatTime(meal.eatenAt) }}</p>
+    <div
+      v-if="summary && summary.meals.length === 0"
+      class="mt-4 rounded-2xl bg-card px-4 py-6 text-center"
+    >
+      <p class="caps text-sm">Nothing logged yet</p>
+      <p class="mt-1 text-sm text-muted-foreground">Tap Add meal to log what you ate.</p>
+    </div>
+
+    <ul class="mt-4 space-y-2">
+      <li v-for="meal in summary?.meals" :key="meal.id" class="rounded-2xl bg-card p-2">
+        <div class="flex items-center gap-3">
+          <div class="flex min-w-[4.75rem] flex-col items-center rounded-xl bg-white/8 px-3 py-2">
+            <span class="figure text-xl leading-tight">{{ formatNumber(mealKcal(meal)) }}</span>
+            <span class="text-[11px] text-muted-foreground">kcal</span>
           </div>
-          <div class="flex shrink-0 items-center gap-1">
-            <p class="tabular-nums">{{ formatNumber(mealKcal(meal)) }} kcal</p>
-            <button
-              type="button"
-              :aria-label="`Delete ${meal.name}`"
-              :disabled="deletingId === meal.id"
-              class="-mr-2 flex size-9 items-center justify-center rounded-full text-muted-foreground disabled:opacity-40"
-              @click="remove(meal)"
-            >
-              ✕
-            </button>
+          <div class="min-w-0 flex-1">
+            <p class="truncate font-medium">{{ meal.name }}</p>
+            <p class="figure text-sm font-medium text-muted-foreground">
+              {{ formatTime(meal.eatenAt) }}
+            </p>
           </div>
+          <button
+            type="button"
+            :aria-label="`Delete ${meal.name}`"
+            :disabled="deletingId === meal.id"
+            class="flex size-10 shrink-0 items-center justify-center rounded-full text-muted-foreground disabled:opacity-40"
+            @click="remove(meal)"
+          >
+            <X class="size-5" />
+          </button>
         </div>
-        <ul v-if="meal.veggieHints.length > 0" class="mt-2 space-y-1 text-xs text-amber-200">
-          <li v-for="hint in meal.veggieHints" :key="hint">⚠️ {{ hint }}</li>
+        <ul v-if="meal.veggieHints.length > 0" class="mt-2 space-y-1 px-2 pb-1">
+          <li
+            v-for="hint in meal.veggieHints"
+            :key="hint"
+            class="flex items-start gap-2 text-xs text-amber-200"
+          >
+            <TriangleAlert class="mt-px size-3.5 shrink-0" />
+            {{ hint }}
+          </li>
         </ul>
       </li>
     </ul>
   </section>
 
-  <RouterLink
-    :to="{ name: 'add-meal' }"
-    aria-label="Add meal"
-    class="fixed right-4 bottom-[max(1.5rem,env(safe-area-inset-bottom))] flex size-14 items-center justify-center rounded-full bg-emerald-400 text-3xl text-zinc-950 shadow-lg"
+  <div
+    class="pointer-events-none fixed inset-x-0 bottom-0 mx-auto flex max-w-md justify-center bg-gradient-to-t from-background via-background/80 to-transparent px-4 pt-10 pb-[max(1.25rem,env(safe-area-inset-bottom))]"
   >
-    +
-  </RouterLink>
+    <RouterLink
+      :to="{ name: 'add-meal' }"
+      class="caps pointer-events-auto flex items-center gap-2 rounded-full bg-white px-8 py-4 text-sm text-zinc-950 shadow-[0_8px_30px_rgb(0_0_0/0.45)]"
+    >
+      <Plus class="size-5" :stroke-width="2.5" />
+      Add meal
+    </RouterLink>
+  </div>
 </template>
