@@ -43,4 +43,8 @@ public class WhoopController {
                 .build();
     }
 
+    @GetMapping("/energy")
+    public EnergyResponse getEnergy() {
+        return whoopService.getEnergy();
+    }
 }

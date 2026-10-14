@@ -13,6 +13,8 @@ import java.time.Instant;
 public class WhoopService {
 
     private static final String TOKEN_URL = "https://api.prod.whoop.com/oauth/oauth2/token";
+    private static final String CYCLE_URL = "https://api.prod.whoop.com/developer/v2/cycle?limit=8";
+    private static final double KJ_PER_KCAL = 4.184;
 
     private final WhoopTokenRepository whoopTokenRepository;
     private final WhoopProperties whoopProperties;
@@ -88,5 +90,32 @@ public class WhoopService {
         }
 
         return whoopTokenRepository.save(token);
+    }
+
+    public EnergyResponse getEnergy(){
+        WhoopCycleResponse response = restClient.get()
+                .uri(CYCLE_URL)
+                .header("Authorization", "Bearer " + getValidAccessToken())
+                .retrieve()
+                .body(WhoopCycleResponse.class);
+
+        double todayKj = 0;
+        double weekKj = 0;
+        int weekDays = 0;
+
+        for(WhoopCycle cycle : response.records()) {
+            if (!"SCORED".equals(cycle.scoreState())) {
+                continue;
+            }
+            if(cycle.end() == null) {
+                todayKj = cycle.score().kilojoule();
+            } else {
+                weekKj += cycle.score().kilojoule();
+                weekDays++;
+            }
+        }
+        int todayKcal = (int) Math.round(todayKj / KJ_PER_KCAL);
+        int weeklyAverageKcal = (int) Math.round(weekKj / weekDays / KJ_PER_KCAL);
+        return new EnergyResponse(weeklyAverageKcal, todayKcal);
     }
 }
