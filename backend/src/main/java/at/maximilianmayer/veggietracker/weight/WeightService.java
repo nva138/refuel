@@ -7,9 +7,12 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.util.List;
 
 @Service
 public class WeightService {
+    private static final ZoneId VIENNA = ZoneId.of("Europe/Vienna");
+
     private final WeightEntryRepository weightEntryRepository;
     private final SettingsRepository settingsRepository;
 
@@ -20,7 +23,7 @@ public class WeightService {
 
     @Transactional
     public WeightEntryResponse logWeight(LogWeightRequest request) {
-        LocalDate today = LocalDate.now(ZoneId.of("Europe/Vienna"));
+        LocalDate today = LocalDate.now(VIENNA);
         WeightEntry entry = weightEntryRepository.findByMeasuredOn(today).orElse(null);
 
         if(entry == null) {
@@ -36,5 +39,14 @@ public class WeightService {
         settingsRepository.save(settings);
 
         return WeightEntryResponse.from(saved);
+    }
+
+    @Transactional(readOnly = true)
+    public List<WeightEntryResponse> getHistory() {
+        LocalDate weightRecordingStart = LocalDate.now(VIENNA).minusDays(90);
+        return weightEntryRepository.findByMeasuredOnGreaterThanEqualOrderByMeasuredOnAsc(weightRecordingStart)
+                .stream()
+                .map(WeightEntryResponse::from)
+                .toList();
     }
 }
