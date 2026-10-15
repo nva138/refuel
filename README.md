@@ -2,6 +2,15 @@
 
 An AI calorie tracker for vegetarians, built for the iPhone. Describe your meal, take a photo of your plate or scan a nutrition label, check the suggestion and save it. Works with WHOOP: your daily calorie goal follows what you actually burned.
 
+<p>
+  <img src="docs/screenshots/today.png" alt="Start page with rings for protein, calories and calories burned, and today's meals" width="200">
+  <img src="docs/screenshots/add-meal.png" alt="Adding a meal: Claude's suggestion with veggie hints and live totals" width="200">
+  <img src="docs/screenshots/weight.png" alt="Weight page with the current weight, the change over 30 days and a trend chart" width="200">
+  <img src="docs/screenshots/settings.png" alt="Settings with goal mode, body weight and the WHOOP connection" width="200">
+</p>
+
+<sub>Screenshots show demo data.</sub>
+
 ## How it works
 
 1. Describe what you ate ("2 eggs and a slice of wholegrain bread"), take a photo of your plate, or scan the nutrition label of a single product
@@ -26,6 +35,10 @@ Refuel is an independent project and is not affiliated with or endorsed by WHOOP
 - **Mode:** Cut, Maintain or Bulk. Calories turn green when you are below, around (±5 %) or above your goal, and red otherwise
 - **Protein:** 2 g per kg of body weight
 
+## Weight
+
+Log your weight once a day. The weight page shows the trend over a week, a month or three months, and the protein goal follows your latest weight. Logging again on the same day replaces that day's value, enforced by a unique date column in the database.
+
 ## Veggie hints
 
 The app never says "this is vegetarian". It only shows warnings about things that might not be, for example chicken stock in a risotto, animal rennet in Parmesan or gelatin on an ingredient list. If nothing is found, there is no warning, not a "vegetarian" label. A photo can't show hidden ingredients, so when in doubt, ask or check the label.
@@ -36,7 +49,7 @@ The app never says "this is vegetarian". It only shows warnings about things tha
 - **Structured output.** Claude answers in the exact shape of a Java record, so there is no manual JSON parsing.
 - **The AI sits behind an interface.** `MealSuggester` hides which model or provider is used, so switching is a one-line change.
 - **Photos are resized on the phone.** The frontend converts every photo to a JPEG of at most 1600 px before uploading. This keeps uploads small and handles iPhone HEIC photos.
-- **"Today" means today in Vienna.** Day boundaries are calculated in `Europe/Vienna` and stored as UTC timestamps.
+- **"Today" means today in Vienna.** Day boundaries are calculated in `Europe/Vienna` and stored as UTC timestamps. Weight entries use a plain date in Vienna time.
 
 ## Status
 
@@ -45,7 +58,7 @@ The app never says "this is vegetarian". It only shows warnings about things tha
 - [x] Veggie hints
 - [x] Daily goals for calories and protein
 - [x] WHOOP integration
-- [ ] Weight history with a chart
+- [x] Weight history with a chart
 - [ ] Edit meals, history and weekly overview
 - [ ] Login and deployment
 
