@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import {
+  Weight as WeightIcon,
   Check,
   Flame,
   Plus,
@@ -137,7 +138,13 @@ function mealKcal(meal: Meal): number {
 
 <template>
   <header class="grid grid-cols-[2.5rem_1fr_2.5rem] items-center">
-    <span />
+    <RouterLink
+      :to="{ name: 'weight' }"
+      aria-label="Weight"
+      class="flex size-10 items-center justify-center rounded-full text-muted-foreground"
+    >
+      <WeightIcon class="size-6" />
+    </RouterLink>
     <p class="caps justify-self-center rounded-full bg-white/8 px-6 py-2 text-sm">Today</p>
     <RouterLink
       :to="{ name: 'settings' }"

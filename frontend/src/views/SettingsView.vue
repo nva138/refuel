@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue'
-import { useRouter } from 'vue-router'
-import { Check } from '@lucide/vue'
+import { RouterLink, useRouter } from 'vue-router'
+import { Check, ChevronRight } from '@lucide/vue'
 import PageHeader from '@/components/PageHeader.vue'
 import { fetchSettings, updateSettings } from '@/api/settings'
 import { fetchEnergy } from '@/api/whoop'
@@ -109,19 +109,25 @@ const inputClass =
       </p>
     </section>
 
-    <section class="rounded-2xl bg-card p-4">
-      <label class="block">
-        <span class="caps text-xs text-muted-foreground">Body weight (kg)</span>
-        <input v-model="form.bodyWeightKg" :class="inputClass" class="mt-3" inputmode="decimal" />
-      </label>
-      <p v-if="proteinGoalG !== null" class="mt-3 text-sm text-muted-foreground">
-        Protein goal
-        <span class="figure text-foreground"
-          >{{ Math.round(toNumber(form.bodyWeightKg) * 2) || proteinGoalG }} g</span
-        >
-        · 2 g per kg
-      </p>
-    </section>
+    <RouterLink
+      :to="{ name: 'weight' }"
+      class="flex items-center justify-between gap-4 rounded-2xl bg-card p-4"
+    >
+      <div>
+        <p class="caps text-xs text-muted-foreground">Body weight</p>
+        <p class="figure mt-1 text-2xl">
+          {{ form.bodyWeightKg }}
+          <span class="text-sm font-medium text-muted-foreground">kg</span>
+        </p>
+        <p v-if="proteinGoalG !== null" class="mt-1 text-sm text-muted-foreground">
+          Protein goal <span class="figure text-foreground">{{ proteinGoalG }} g</span>
+        </p>
+      </div>
+      <span class="caps flex shrink-0 items-center gap-1 text-xs text-muted-foreground">
+        Log weight
+        <ChevronRight class="size-4" />
+      </span>
+    </RouterLink>
 
     <section v-if="energyChecked" class="rounded-2xl bg-card p-4">
       <h2 class="caps text-xs text-muted-foreground">WHOOP</h2>
