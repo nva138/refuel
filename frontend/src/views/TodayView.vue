@@ -4,6 +4,7 @@ import { RouterLink } from 'vue-router'
 import {
   Weight as WeightIcon,
   Check,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Flame,
@@ -18,7 +19,7 @@ import ProgressRing from '@/components/ProgressRing.vue'
 import { deleteMeal, fetchDay, fetchToday } from '@/api/meals'
 import { fetchSettings } from '@/api/settings'
 import { fetchEnergy } from '@/api/whoop'
-import type { DaySummary, Meal } from '@/types/meal'
+import type { DaySummary, Meal, MealPart } from '@/types/meal'
 import type { Settings } from '@/types/settings'
 import type { Energy } from '@/types/whoop'
 
@@ -168,6 +169,26 @@ function formatTime(eatenAt: string): string {
     minute: '2-digit',
     timeZone: 'Europe/Vienna',
   })
+}
+
+const expandedIds = ref(new Set<number>())
+
+function toggleMeal(id: number) {
+  const next = new Set(expandedIds.value)
+  if (next.has(id)) {
+    next.delete(id)
+  } else {
+    next.add(id)
+  }
+  expandedIds.value = next
+}
+
+function partValue(part: MealPart, perHundredGrams: number): number {
+  return (perHundredGrams * part.amountG) / 100
+}
+
+function mealMacro(meal: Meal, key: 'proteinPer100g' | 'carbsPer100g' | 'fatPer100g'): number {
+  return meal.parts.reduce((sum, part) => sum + partValue(part, part[key]), 0)
 }
 
 function mealKcal(meal: Meal): number {
@@ -320,17 +341,31 @@ function mealKcal(meal: Meal): number {
 
     <ul class="mt-4 space-y-2">
       <li v-for="meal in summary?.meals" :key="meal.id" class="rounded-2xl bg-card p-2">
-        <div class="flex items-center gap-3">
-          <div class="flex min-w-[4.75rem] flex-col items-center rounded-xl bg-white/8 px-3 py-2">
-            <span class="figure text-xl leading-tight">{{ formatNumber(mealKcal(meal)) }}</span>
-            <span class="text-[11px] text-muted-foreground">kcal</span>
-          </div>
-          <div class="min-w-0 flex-1">
-            <p class="truncate font-medium">{{ meal.name }}</p>
-            <p class="figure text-sm font-medium text-muted-foreground">
-              {{ formatTime(meal.eatenAt) }}
-            </p>
-          </div>
+        <div class="flex items-center gap-1">
+          <button
+            type="button"
+            class="flex min-w-0 flex-1 items-center gap-3 text-left"
+            :aria-expanded="expandedIds.has(meal.id)"
+            :aria-controls="`meal-${meal.id}-details`"
+            @click="toggleMeal(meal.id)"
+          >
+            <span
+              class="flex min-w-[4.75rem] flex-col items-center rounded-xl bg-white/8 px-3 py-2"
+            >
+              <span class="figure text-xl leading-tight">{{ formatNumber(mealKcal(meal)) }}</span>
+              <span class="text-[11px] text-muted-foreground">kcal</span>
+            </span>
+            <span class="min-w-0 flex-1">
+              <span class="block truncate font-medium">{{ meal.name }}</span>
+              <span class="figure block text-sm font-medium text-muted-foreground">
+                {{ formatTime(meal.eatenAt) }}
+              </span>
+            </span>
+            <ChevronDown
+              class="size-5 shrink-0 text-muted-foreground transition-transform"
+              :class="{ 'rotate-180': expandedIds.has(meal.id) }"
+            />
+          </button>
           <button
             type="button"
             :aria-label="`Delete ${meal.name}`"
@@ -340,6 +375,38 @@ function mealKcal(meal: Meal): number {
           >
             <X class="size-5" />
           </button>
+        </div>
+        <div
+          v-if="expandedIds.has(meal.id)"
+          :id="`meal-${meal.id}-details`"
+          class="mx-2 mt-3 mb-1 border-t border-white/8 pt-3"
+        >
+          <ul class="space-y-2.5">
+            <li
+              v-for="part in meal.parts"
+              :key="part.id"
+              class="flex items-baseline justify-between gap-3"
+            >
+              <span class="min-w-0">
+                <span class="block truncate text-sm">{{ part.name }}</span>
+                <span class="figure block text-xs font-medium text-muted-foreground">
+                  {{ formatNumber(part.amountG) }} g ·
+                  {{ formatNumber(partValue(part, part.proteinPer100g)) }} g protein
+                </span>
+              </span>
+              <span class="figure shrink-0 text-sm">
+                {{ formatNumber(partValue(part, part.kcalPer100g)) }} kcal
+              </span>
+            </li>
+          </ul>
+          <p class="figure mt-3 flex gap-4 text-xs font-medium text-muted-foreground">
+            <span>P {{ formatNumber(mealMacro(meal, 'proteinPer100g')) }} g</span>
+            <span>C {{ formatNumber(mealMacro(meal, 'carbsPer100g')) }} g</span>
+            <span>F {{ formatNumber(mealMacro(meal, 'fatPer100g')) }} g</span>
+          </p>
+          <p v-if="meal.enteredText" class="mt-2 text-xs text-muted-foreground italic">
+            “{{ meal.enteredText }}”
+          </p>
         </div>
         <ul v-if="meal.veggieHints.length > 0" class="mt-2 space-y-1 px-2 pb-1">
           <li
