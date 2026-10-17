@@ -8,6 +8,8 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 
 @Service
@@ -16,6 +18,7 @@ public class WhoopService {
     private static final String TOKEN_URL = "https://api.prod.whoop.com/oauth/oauth2/token";
     private static final String CYCLE_URL = "https://api.prod.whoop.com/developer/v2/cycle?limit=25";
     private static final double KJ_PER_KCAL = 4.184;
+    private static final ZoneId VIENNA = ZoneId.of("Europe/Vienna");
 
     private final WhoopTokenRepository whoopTokenRepository;
     private final WhoopProperties whoopProperties;
@@ -93,31 +96,34 @@ public class WhoopService {
         return whoopTokenRepository.save(token);
     }
 
-    public EnergyResponse getEnergy(){
+    public EnergyResponse getEnergy(LocalDate date){
         WhoopCycleResponse response = restClient.get()
                 .uri(CYCLE_URL)
                 .header("Authorization", "Bearer " + getValidAccessToken())
                 .retrieve()
                 .body(WhoopCycleResponse.class);
 
-        double todayKj = 0;
+        LocalDate day = date != null ? date : LocalDate.now(VIENNA);
+        double dayKj = 0;
         double weekKj = 0;
         int weekDays = 0;
         Instant weekStart = Instant.now().minus(7, ChronoUnit.DAYS);
+        Instant noon = day.atTime(12, 0).atZone(VIENNA).toInstant();
 
         for(WhoopCycle cycle : response.records()) {
             if (!"SCORED".equals(cycle.scoreState())) {
                 continue;
             }
-            if(cycle.end() == null) {
-                todayKj = cycle.score().kilojoule();
-            } else if (cycle.start().isAfter(weekStart)) {
+            if (cycle.start().isBefore(noon) && (cycle.end() == null || cycle.end().isAfter(noon))) {
+                dayKj = cycle.score().kilojoule();
+            }
+            if (cycle.end() != null && cycle.start().isAfter(weekStart)) {
                 weekKj += cycle.score().kilojoule();
                 weekDays++;
             }
         }
-        int todayKcal = (int) Math.round(todayKj / KJ_PER_KCAL);
+        int dayKcal = (int) Math.round(dayKj / KJ_PER_KCAL);
         int weeklyAverageKcal = (int) Math.round(weekKj / weekDays / KJ_PER_KCAL);
-        return new EnergyResponse(weeklyAverageKcal, todayKcal);
+        return new EnergyResponse(weeklyAverageKcal, dayKcal);
     }
 }

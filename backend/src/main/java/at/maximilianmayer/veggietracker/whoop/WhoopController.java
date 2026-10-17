@@ -2,6 +2,7 @@ package at.maximilianmayer.veggietracker.whoop;
 
 
 import jakarta.servlet.http.HttpSession;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -10,6 +11,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.net.URI;
+import java.time.LocalDate;
 import java.util.UUID;
 
 @RestController
@@ -44,7 +46,8 @@ public class WhoopController {
     }
 
     @GetMapping("/energy")
-    public EnergyResponse getEnergy() {
-        return whoopService.getEnergy();
+    public EnergyResponse getEnergy(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        return whoopService.getEnergy(date);
     }
 }
