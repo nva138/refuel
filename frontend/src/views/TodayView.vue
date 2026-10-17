@@ -4,6 +4,8 @@ import { RouterLink } from 'vue-router'
 import {
   Weight as WeightIcon,
   Check,
+  ChevronLeft,
+  ChevronRight,
   Flame,
   Plus,
   Settings as SettingsIcon,
@@ -13,7 +15,7 @@ import {
   X,
 } from '@lucide/vue'
 import ProgressRing from '@/components/ProgressRing.vue'
-import { deleteMeal, fetchToday } from '@/api/meals'
+import { deleteMeal, fetchDay, fetchToday } from '@/api/meals'
 import { fetchSettings } from '@/api/settings'
 import { fetchEnergy } from '@/api/whoop'
 import type { DaySummary, Meal } from '@/types/meal'
@@ -27,15 +29,48 @@ const settings = ref<Settings | null>(null)
 const energy = ref<Energy | null>(null)
 const deletingId = ref<number | null>(null)
 
+function viennaToday(): string {
+  return new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Vienna' })
+}
+
+function shiftDate(date: string, days: number): string {
+  const shifted = new Date(`${date}T00:00:00Z`)
+  shifted.setUTCDate(shifted.getUTCDate() + days)
+  return shifted.toISOString().slice(0, 10)
+}
+
+const selectedDate = ref(viennaToday())
+const isToday = computed(() => selectedDate.value === viennaToday())
+
+const dayLabel = computed(() => {
+  if (isToday.value) return 'Today'
+  if (selectedDate.value === shiftDate(viennaToday(), -1)) return 'Yesterday'
+  return new Date(`${selectedDate.value}T00:00:00Z`).toLocaleDateString('en-GB', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    timeZone: 'UTC',
+  })
+})
+
 async function load() {
-  const [today, currentSettings, currentEnergy] = await Promise.all([
-    fetchToday(),
+  const date = selectedDate.value
+  const [day, currentSettings, currentEnergy] = await Promise.all([
+    isToday.value ? fetchToday() : fetchDay(date),
     fetchSettings(),
-    fetchEnergy().catch(() => null),
+    (isToday.value ? fetchEnergy() : fetchEnergy(date)).catch(() => null),
   ])
-  summary.value = today
+  if (date !== selectedDate.value) return
+  summary.value = day
   settings.value = currentSettings
   energy.value = currentEnergy
+}
+
+function goToDay(days: number) {
+  const next = shiftDate(selectedDate.value, days)
+  if (next > viennaToday()) return
+  selectedDate.value = next
+  load()
 }
 
 const kcalGoal = computed(() => energy.value?.weeklyAverageKcal ?? settings.value?.kcalReference)
@@ -91,6 +126,10 @@ const kcalStatus = computed(() => {
   if (!summary.value || !settings.value || kcalGoal.value === undefined) return null
   const difference = Math.round(kcalGoal.value - summary.value.totalKcal)
   const left = formatNumber(Math.abs(difference))
+  if (!isToday.value) {
+    if (Math.abs(difference) < 1) return 'On target'
+    return difference > 0 ? `${left} kcal under goal` : `${left} kcal over goal`
+  }
   if (kcalOnTrack.value) {
     return settings.value.mode === 'CUT' ? `${left} kcal left` : 'On target'
   }
@@ -145,7 +184,26 @@ function mealKcal(meal: Meal): number {
     >
       <WeightIcon class="size-6" />
     </RouterLink>
-    <p class="caps justify-self-center rounded-full bg-white/8 px-6 py-2 text-sm">Today</p>
+    <div class="flex items-center justify-self-center rounded-full bg-white/8">
+      <button
+        type="button"
+        aria-label="Previous day"
+        class="flex size-9 items-center justify-center rounded-full text-muted-foreground"
+        @click="goToDay(-1)"
+      >
+        <ChevronLeft class="size-5" />
+      </button>
+      <p class="caps min-w-28 text-center text-sm" aria-live="polite">{{ dayLabel }}</p>
+      <button
+        type="button"
+        aria-label="Next day"
+        :disabled="isToday"
+        class="flex size-9 items-center justify-center rounded-full text-muted-foreground disabled:opacity-25"
+        @click="goToDay(1)"
+      >
+        <ChevronRight class="size-5" />
+      </button>
+    </div>
     <RouterLink
       :to="{ name: 'settings' }"
       aria-label="Settings"
@@ -204,7 +262,7 @@ function mealKcal(meal: Meal): number {
         <span class="text-[11px] text-muted-foreground">kcal</span>
       </ProgressRing>
       <p class="caps mt-3 text-xs">Burned</p>
-      <p class="mt-0.5 text-xs text-muted-foreground">today</p>
+      <p class="mt-0.5 text-xs text-muted-foreground">{{ isToday ? 'today' : 'that day' }}</p>
     </div>
   </section>
 
@@ -255,7 +313,9 @@ function mealKcal(meal: Meal): number {
       class="mt-4 rounded-2xl bg-card px-4 py-6 text-center"
     >
       <p class="caps text-sm">Nothing logged yet</p>
-      <p class="mt-1 text-sm text-muted-foreground">Tap Add meal to log what you ate.</p>
+      <p class="mt-1 text-sm text-muted-foreground">
+        {{ isToday ? 'Tap Add meal to log what you ate.' : 'No meals were logged that day.' }}
+      </p>
     </div>
 
     <ul class="mt-4 space-y-2">
@@ -296,6 +356,7 @@ function mealKcal(meal: Meal): number {
   </section>
 
   <div
+    v-if="isToday"
     class="pointer-events-none fixed inset-x-0 bottom-0 mx-auto flex max-w-md justify-center bg-gradient-to-t from-background via-background/80 to-transparent px-4 pt-10 pb-[max(1.25rem,env(safe-area-inset-bottom))]"
   >
     <RouterLink

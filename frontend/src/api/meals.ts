@@ -13,6 +13,12 @@ export async function fetchToday(): Promise<DaySummary> {
   return response.json()
 }
 
+export async function fetchDay(date: string): Promise<DaySummary> {
+  const response = await fetch(`/api/meals/day?date=${date}`)
+  if (!response.ok) throw new Error(`Request failed: ${response.status}`)
+  return response.json()
+}
+
 export async function createMeal(request: CreateMealRequest): Promise<Meal> {
   const response = await fetch('/api/meals', {
     method: 'POST',
