@@ -7,6 +7,7 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  Pencil,
   RotateCcw,
   Flame,
   Plus,
@@ -17,7 +18,7 @@ import {
   X,
 } from '@lucide/vue'
 import ProgressRing from '@/components/ProgressRing.vue'
-import { deleteMeal, fetchDay, fetchToday } from '@/api/meals'
+import { deleteMeal, fetchDay, fetchToday, updatePartAmount } from '@/api/meals'
 import { fetchSettings } from '@/api/settings'
 import { fetchEnergy } from '@/api/whoop'
 import type { DaySummary, Meal, MealPart } from '@/types/meal'
@@ -188,6 +189,30 @@ function toggleMeal(id: number) {
     next.add(id)
   }
   expandedIds.value = next
+}
+
+const editingPartId = ref<number | null>(null)
+const editAmount = ref('')
+const savingAmount = ref(false)
+
+function startEditing(part: MealPart) {
+  editingPartId.value = part.id
+  editAmount.value = String(part.amountG).replace('.', ',')
+}
+
+async function saveAmount(meal: Meal, part: MealPart) {
+  const amountG = Number(editAmount.value.replace(',', '.'))
+  if (!(amountG > 0)) return
+  savingAmount.value = true
+  try {
+    await updatePartAmount(meal.id, part.id, amountG)
+    editingPartId.value = null
+    await load()
+  } catch {
+    window.alert('Saving failed. Is the backend running?')
+  } finally {
+    savingAmount.value = false
+  }
 }
 
 function partValue(part: MealPart, perHundredGrams: number): number {
@@ -394,16 +419,59 @@ function mealKcal(meal: Meal): number {
               :key="part.id"
               class="flex items-baseline justify-between gap-3"
             >
-              <span class="min-w-0">
-                <span class="block truncate text-sm">{{ part.name }}</span>
-                <span class="figure block text-xs font-medium text-muted-foreground">
-                  {{ formatNumber(part.amountG) }} g ·
-                  {{ formatNumber(partValue(part, part.proteinPer100g)) }} g protein
+              <form
+                v-if="editingPartId === part.id"
+                class="flex w-full items-center gap-2"
+                @submit.prevent="saveAmount(meal, part)"
+              >
+                <span class="min-w-0 flex-1 truncate text-sm">{{ part.name }}</span>
+                <label class="flex items-center gap-1">
+                  <span class="sr-only">Amount of {{ part.name }} in grams</span>
+                  <input
+                    v-model="editAmount"
+                    inputmode="decimal"
+                    class="figure w-20 rounded-lg bg-white/8 px-2 py-1.5 text-right text-sm outline-none ring-1 ring-white/15 focus:ring-white/40"
+                  />
+                  <span class="text-xs text-muted-foreground">g</span>
+                </label>
+                <button
+                  type="submit"
+                  :disabled="savingAmount"
+                  class="caps rounded-lg bg-white px-3 py-1.5 text-[11px] text-zinc-950 disabled:opacity-50"
+                >
+                  Save
+                </button>
+                <button
+                  type="button"
+                  aria-label="Cancel"
+                  class="flex size-8 items-center justify-center text-muted-foreground"
+                  @click="editingPartId = null"
+                >
+                  <X class="size-4" />
+                </button>
+              </form>
+              <template v-else>
+                <span class="min-w-0">
+                  <span class="block truncate text-sm">{{ part.name }}</span>
+                  <button
+                    type="button"
+                    class="figure flex items-center gap-1.5 text-xs font-medium text-muted-foreground"
+                    :aria-label="`Change amount of ${part.name}, currently ${formatNumber(part.amountG)} g`"
+                    @click="startEditing(part)"
+                  >
+                    <span class="underline decoration-dotted underline-offset-2"
+                      >{{ formatNumber(part.amountG) }} g</span
+                    >
+                    <Pencil class="size-3" />
+                    <span
+                      >· {{ formatNumber(partValue(part, part.proteinPer100g)) }} g protein</span
+                    >
+                  </button>
                 </span>
-              </span>
-              <span class="figure shrink-0 text-sm">
-                {{ formatNumber(partValue(part, part.kcalPer100g)) }} kcal
-              </span>
+                <span class="figure shrink-0 text-sm">
+                  {{ formatNumber(partValue(part, part.kcalPer100g)) }} kcal
+                </span>
+              </template>
             </li>
           </ul>
           <p class="figure mt-3 flex gap-4 text-xs font-medium text-muted-foreground">

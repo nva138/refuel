@@ -61,6 +61,20 @@ export async function deleteMeal(id: number): Promise<void> {
   if (!response.ok) throw new Error(`Request failed: ${response.status}`)
 }
 
+export async function updatePartAmount(
+  mealId: number,
+  partId: number,
+  amountG: number,
+): Promise<Meal> {
+  const response = await fetch(`/api/meals/${mealId}/parts/${partId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ amountG }),
+  })
+  if (!response.ok) throw new Error(`Request failed: ${response.status}`)
+  return response.json()
+}
+
 export async function readLabel(photo: Blob): Promise<ReadLabelResponse> {
   const formData = new FormData()
   formData.append('photo', photo, 'part.jpg')

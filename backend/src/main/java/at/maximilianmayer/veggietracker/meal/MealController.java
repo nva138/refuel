@@ -52,6 +52,11 @@ public class MealController {
         return mealService.readLabel(photo.getBytes());
     }
 
+    @PutMapping("/{mealId}/parts/{partId}")
+    public MealResponse updatePartAmount(@PathVariable Long mealId, @PathVariable Long partId, @RequestBody UpdatePartAmountRequest request) {
+        return mealService.updatePartAmount(mealId, partId, request.amountG());
+    }
+
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteMeal(@PathVariable Long id) {

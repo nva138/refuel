@@ -1,7 +1,9 @@
 package at.maximilianmayer.veggietracker.meal;
 
 
+import org.springframework.http.HttpStatus;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -83,6 +85,23 @@ public class MealService {
 
    public void deleteMeal(Long id) {
         mealRepository.deleteById(id);
+   }
+
+   @Transactional
+   public MealResponse updatePartAmount(Long mealId, Long partId, BigDecimal amountG) {
+        if (amountG == null || amountG.signum() <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Amount must be greater than 0");
+        }
+
+        Meal meal = mealRepository.findById(mealId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Meal not found"));
+        MealPart part = meal.getParts().stream()
+                .filter(candidate -> candidate.getId().equals(partId))
+                .findFirst()
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Part not found"));
+
+        part.setAmountG(amountG);
+        return MealResponse.from(meal);
    }
 
    public ReadLabelResponse readLabel(byte[] photo) {
