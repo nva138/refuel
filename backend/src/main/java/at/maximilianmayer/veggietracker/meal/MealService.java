@@ -13,6 +13,8 @@ import java.util.List;
 @Service
 public class MealService {
 
+    private static final ZoneId VIENNA = ZoneId.of("Europe/Vienna");
+
     private final MealRepository mealRepository;
     private final MealSuggester mealSuggester;
 
@@ -46,11 +48,9 @@ public class MealService {
 
 
     @Transactional(readOnly = true)
-   public DaySummaryResponse getToday(){
-        ZoneId zone = ZoneId.of("Europe/Vienna");
-       LocalDate today = LocalDate.now(zone);
-       Instant start = today.atStartOfDay(zone).toInstant();
-       Instant end = today.plusDays(1).atStartOfDay(zone).toInstant();
+   public DaySummaryResponse getDay(LocalDate date){
+       Instant start = date.atStartOfDay(VIENNA).toInstant();
+       Instant end = date.plusDays(1).atStartOfDay(VIENNA).toInstant();
 
        List<Meal> meals = mealRepository.findByEatenAtGreaterThanEqualAndEatenAtLessThanOrderByEatenAtAsc(start, end);
 
@@ -70,7 +70,7 @@ public class MealService {
 
        }
        List<MealResponse> mealResponses = meals.stream().map(MealResponse::from).toList();
-       return new DaySummaryResponse(today, mealResponses, totalKcal, totalProtein, totalCarbs, totalFats);
+       return new DaySummaryResponse(date, mealResponses, totalKcal, totalProtein, totalCarbs, totalFats);
    }
 
    public SuggestMealResponse suggestMeal(SuggestMealRequest request) {
@@ -88,4 +88,8 @@ public class MealService {
    public ReadLabelResponse readLabel(byte[] photo) {
         return mealSuggester.readLabel(photo);
    }
+
+    public DaySummaryResponse getToday() {
+        return getDay(LocalDate.now(VIENNA));
+    }
 }

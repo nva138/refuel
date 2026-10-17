@@ -1,11 +1,13 @@
 package at.maximilianmayer.veggietracker.meal;
 
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.time.LocalDate;
 
 @RestController
 @RequestMapping("/api/meals")
@@ -28,6 +30,11 @@ public class MealController {
     @GetMapping("/today")
     public DaySummaryResponse getMealsForTheDay() {
         return mealService.getToday();
+    }
+
+    @GetMapping("/day")
+    public DaySummaryResponse getDay(@RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        return mealService.getDay(date);
     }
 
     @PostMapping("/suggest")
