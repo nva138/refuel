@@ -88,6 +88,21 @@ public class MealService {
    }
 
    @Transactional
+   public MealResponse setFavourite(Long mealId, boolean favourite) {
+        Meal meal = mealRepository.findById(mealId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Meal not found"));
+        meal.setFavourite(favourite);
+        return MealResponse.from(meal);
+   }
+
+   @Transactional(readOnly = true)
+   public List<MealResponse> getFavourites() {
+        return mealRepository.findByFavouriteTrueOrderByNameAsc().stream()
+                .map(MealResponse::from)
+                .toList();
+   }
+
+   @Transactional
    public MealResponse updatePartAmount(Long mealId, Long partId, BigDecimal amountG) {
         if (amountG == null || amountG.signum() <= 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Amount must be greater than 0");

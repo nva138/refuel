@@ -9,6 +9,7 @@ import {
   ChevronRight,
   Pencil,
   RotateCcw,
+  Star,
   Flame,
   Plus,
   Settings as SettingsIcon,
@@ -18,7 +19,7 @@ import {
   X,
 } from '@lucide/vue'
 import ProgressRing from '@/components/ProgressRing.vue'
-import { deleteMeal, fetchDay, fetchToday, updatePartAmount } from '@/api/meals'
+import { deleteMeal, fetchDay, fetchToday, setFavourite, updatePartAmount } from '@/api/meals'
 import { fetchSettings } from '@/api/settings'
 import { fetchEnergy } from '@/api/whoop'
 import type { DaySummary, Meal, MealPart } from '@/types/meal'
@@ -174,6 +175,15 @@ function formatTime(eatenAt: string): string {
 }
 
 const router = useRouter()
+
+async function toggleFavourite(meal: Meal) {
+  try {
+    await setFavourite(meal.id, !meal.favourite)
+    await load()
+  } catch {
+    window.alert('Saving failed. Is the backend running?')
+  }
+}
 
 function logAgain(meal: Meal) {
   router.push({ name: 'add-meal', state: { repeatMeal: JSON.parse(JSON.stringify(meal)) } })
@@ -482,14 +492,26 @@ function mealKcal(meal: Meal): number {
           <p v-if="meal.enteredText" class="mt-2 text-xs text-muted-foreground italic">
             “{{ meal.enteredText }}”
           </p>
-          <button
-            type="button"
-            class="caps mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-white/8 py-3 text-xs"
-            @click="logAgain(meal)"
-          >
-            <RotateCcw class="size-4" />
-            Log again today
-          </button>
+          <div class="mt-3 flex gap-2">
+            <button
+              type="button"
+              class="caps flex flex-1 items-center justify-center gap-2 rounded-xl bg-white/8 py-3 text-xs"
+              @click="logAgain(meal)"
+            >
+              <RotateCcw class="size-4" />
+              Log again today
+            </button>
+            <button
+              type="button"
+              :aria-pressed="meal.favourite"
+              :aria-label="meal.favourite ? 'Remove from favourites' : 'Add to favourites'"
+              class="flex w-12 items-center justify-center rounded-xl bg-white/8"
+              :class="meal.favourite ? 'text-amber-300' : 'text-muted-foreground'"
+              @click="toggleFavourite(meal)"
+            >
+              <Star class="size-5" :fill="meal.favourite ? 'currentColor' : 'none'" />
+            </button>
+          </div>
         </div>
         <ul v-if="meal.veggieHints.length > 0" class="mt-2 space-y-1 px-2 pb-1">
           <li

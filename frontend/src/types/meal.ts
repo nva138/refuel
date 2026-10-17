@@ -15,6 +15,7 @@ export interface Meal {
   enteredText: string | null
   veggieHints: string[]
   parts: MealPart[]
+  favourite: boolean
 }
 
 export interface DaySummary {

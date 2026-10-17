@@ -23,6 +23,9 @@ public class Meal {
     @Column(name = "entered_text")
     private String enteredText;
 
+    @Column(name = "favourite", nullable = false)
+    private boolean favourite;
+
     @ElementCollection
     @CollectionTable(name = "meal_veggie_hint", joinColumns = @JoinColumn(name = "meal_id"))
     @Column(name = "hint")
@@ -76,6 +79,14 @@ public class Meal {
 
     public List<MealPart> getParts() {
         return parts;
+    }
+
+    public boolean isFavourite() {
+        return favourite;
+    }
+
+    public void setFavourite(boolean favourite) {
+        this.favourite = favourite;
     }
 
     public List<String> getVeggieHints() {

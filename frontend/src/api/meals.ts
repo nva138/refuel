@@ -75,6 +75,22 @@ export async function updatePartAmount(
   return response.json()
 }
 
+export async function fetchFavourites(): Promise<Meal[]> {
+  const response = await fetch('/api/meals/favourites')
+  if (!response.ok) throw new Error(`Request failed: ${response.status}`)
+  return response.json()
+}
+
+export async function setFavourite(id: number, favourite: boolean): Promise<Meal> {
+  const response = await fetch(`/api/meals/${id}/favourite`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ favourite }),
+  })
+  if (!response.ok) throw new Error(`Request failed: ${response.status}`)
+  return response.json()
+}
+
 export async function readLabel(photo: Blob): Promise<ReadLabelResponse> {
   const formData = new FormData()
   formData.append('photo', photo, 'part.jpg')

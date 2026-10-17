@@ -8,7 +8,8 @@ public record MealResponse(Long id,
                            String name,
                            String enteredText,
                            List<String> veggieHints,
-                           List<MealPartResponse> parts) {
+                           List<MealPartResponse> parts,
+                           boolean favourite) {
 
     public static MealResponse from(Meal meal) {
 
@@ -23,7 +24,8 @@ public record MealResponse(Long id,
                 meal.getName(),
                 meal.getEnteredText(),
                 List.copyOf(meal.getVeggieHints()),
-                partResponses
+                partResponses,
+                meal.isFavourite()
         );
     }
 }

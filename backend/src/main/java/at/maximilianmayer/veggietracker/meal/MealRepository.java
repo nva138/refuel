@@ -10,4 +10,6 @@ import java.util.List;
 @Repository
 public interface MealRepository extends JpaRepository<Meal, Long> {
     List<Meal> findByEatenAtGreaterThanEqualAndEatenAtLessThanOrderByEatenAtAsc(Instant start, Instant end);
+
+    List<Meal> findByFavouriteTrueOrderByNameAsc();
 }

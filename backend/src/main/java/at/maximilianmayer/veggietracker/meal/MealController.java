@@ -8,6 +8,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.time.LocalDate;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/meals")
@@ -50,6 +51,16 @@ public class MealController {
     @PostMapping(value = "/read-label", consumes =  MediaType.MULTIPART_FORM_DATA_VALUE)
     public ReadLabelResponse readLabel(@RequestPart("photo") MultipartFile photo) throws IOException {
         return mealService.readLabel(photo.getBytes());
+    }
+
+    @GetMapping("/favourites")
+    public List<MealResponse> getFavourites() {
+        return mealService.getFavourites();
+    }
+
+    @PutMapping("/{id}/favourite")
+    public MealResponse setFavourite(@PathVariable Long id, @RequestBody SetFavouriteRequest request) {
+        return mealService.setFavourite(id, request.favourite());
     }
 
     @PutMapping("/{mealId}/parts/{partId}")

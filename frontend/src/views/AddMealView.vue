@@ -1,9 +1,15 @@
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { Camera, Plus, ScanLine, Sparkles, TriangleAlert, X } from '@lucide/vue'
+import { Camera, Plus, ScanLine, Sparkles, Star, TriangleAlert, X } from '@lucide/vue'
 import PageHeader from '@/components/PageHeader.vue'
-import { createMeal, readLabel, suggestMeal, suggestMealFromPhoto } from '@/api/meals'
+import {
+  createMeal,
+  fetchFavourites,
+  readLabel,
+  suggestMeal,
+  suggestMealFromPhoto,
+} from '@/api/meals'
 import type {
   CreateMealPartRequest,
   CreateMealRequest,
@@ -113,13 +119,31 @@ function applySuggestion(suggestion: SuggestMealResponse) {
   veggieHints.value = suggestion.veggieHints
 }
 
+function fillFromMeal(meal: Meal) {
+  form.name = meal.name
+  form.enteredText = meal.enteredText ?? ''
+  form.parts = meal.parts.map(toPartForm)
+  veggieHints.value = meal.veggieHints
+  error.value = null
+}
+
 const repeatMeal = (history.state as { repeatMeal?: Meal } | null)?.repeatMeal
 if (repeatMeal) {
-  form.name = repeatMeal.name
-  form.enteredText = repeatMeal.enteredText ?? ''
-  form.parts = repeatMeal.parts.map(toPartForm)
-  veggieHints.value = repeatMeal.veggieHints
+  fillFromMeal(repeatMeal)
 }
+
+const favourites = ref<Meal[]>([])
+
+onMounted(async () => {
+  try {
+    const all = await fetchFavourites()
+    favourites.value = all.filter(
+      (meal, index) => all.findIndex((other) => other.name === meal.name) === index,
+    )
+  } catch {
+    favourites.value = []
+  }
+})
 
 const labelInput = ref<HTMLInputElement | null>(null)
 const labelTargetIndex = ref<number | null>(null)
@@ -271,6 +295,24 @@ const numberInputClass = `${inputClass} figure text-lg`
   <PageHeader title="Add meal" />
 
   <form class="mt-8 space-y-3 pb-32" @submit.prevent="save">
+    <section v-if="favourites.length > 0" class="rounded-2xl bg-card p-4">
+      <h2 class="caps flex items-center gap-2 text-xs text-muted-foreground">
+        <Star class="size-4 text-amber-300" fill="currentColor" />
+        Favourites
+      </h2>
+      <ul class="mt-3 flex flex-wrap gap-2">
+        <li v-for="meal in favourites" :key="meal.id">
+          <button
+            type="button"
+            class="rounded-full bg-white/8 px-3.5 py-2 text-sm"
+            @click="fillFromMeal(meal)"
+          >
+            {{ meal.name }}
+          </button>
+        </li>
+      </ul>
+    </section>
+
     <section class="space-y-3 rounded-2xl bg-card p-4">
       <label class="block">
         <span class="caps text-xs text-muted-foreground">What did you eat?</span>
