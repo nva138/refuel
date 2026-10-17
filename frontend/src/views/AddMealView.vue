@@ -4,7 +4,12 @@ import { useRouter } from 'vue-router'
 import { Camera, Plus, ScanLine, Sparkles, TriangleAlert, X } from '@lucide/vue'
 import PageHeader from '@/components/PageHeader.vue'
 import { createMeal, readLabel, suggestMeal, suggestMealFromPhoto } from '@/api/meals'
-import type { CreateMealPartRequest, CreateMealRequest, SuggestMealResponse } from '@/types/meal'
+import type {
+  CreateMealPartRequest,
+  CreateMealRequest,
+  Meal,
+  SuggestMealResponse,
+} from '@/types/meal'
 
 interface PartForm {
   name: string
@@ -106,6 +111,14 @@ function applySuggestion(suggestion: SuggestMealResponse) {
   form.name = suggestion.name
   form.parts = suggestion.parts.map(toPartForm)
   veggieHints.value = suggestion.veggieHints
+}
+
+const repeatMeal = (history.state as { repeatMeal?: Meal } | null)?.repeatMeal
+if (repeatMeal) {
+  form.name = repeatMeal.name
+  form.enteredText = repeatMeal.enteredText ?? ''
+  form.parts = repeatMeal.parts.map(toPartForm)
+  veggieHints.value = repeatMeal.veggieHints
 }
 
 const labelInput = ref<HTMLInputElement | null>(null)

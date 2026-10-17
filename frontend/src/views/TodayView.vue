@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { RouterLink } from 'vue-router'
+import { RouterLink, useRouter } from 'vue-router'
 import {
   Weight as WeightIcon,
   Check,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  RotateCcw,
   Flame,
   Plus,
   Settings as SettingsIcon,
@@ -169,6 +170,12 @@ function formatTime(eatenAt: string): string {
     minute: '2-digit',
     timeZone: 'Europe/Vienna',
   })
+}
+
+const router = useRouter()
+
+function logAgain(meal: Meal) {
+  router.push({ name: 'add-meal', state: { repeatMeal: JSON.parse(JSON.stringify(meal)) } })
 }
 
 const expandedIds = ref(new Set<number>())
@@ -407,6 +414,14 @@ function mealKcal(meal: Meal): number {
           <p v-if="meal.enteredText" class="mt-2 text-xs text-muted-foreground italic">
             “{{ meal.enteredText }}”
           </p>
+          <button
+            type="button"
+            class="caps mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-white/8 py-3 text-xs"
+            @click="logAgain(meal)"
+          >
+            <RotateCcw class="size-4" />
+            Log again today
+          </button>
         </div>
         <ul v-if="meal.veggieHints.length > 0" class="mt-2 space-y-1 px-2 pb-1">
           <li
