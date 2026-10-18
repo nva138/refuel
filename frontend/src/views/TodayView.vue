@@ -19,18 +19,22 @@ import {
   X,
 } from '@lucide/vue'
 import ProgressRing from '@/components/ProgressRing.vue'
+import WeekBalanceCard from '@/components/WeekBalanceCard.vue'
+import { fetchWeekBalance } from '@/api/balance'
 import { deleteMeal, fetchDay, fetchToday, setFavourite, updatePartAmount } from '@/api/meals'
 import { fetchSettings } from '@/api/settings'
 import { fetchEnergy } from '@/api/whoop'
 import type { DaySummary, Meal, MealPart } from '@/types/meal'
 import type { Settings } from '@/types/settings'
 import type { Energy } from '@/types/whoop'
+import type { WeekBalance } from '@/types/balance'
 
 const MAINTAIN_TOLERANCE = 0.05
 
 const summary = ref<DaySummary | null>(null)
 const settings = ref<Settings | null>(null)
 const energy = ref<Energy | null>(null)
+const week = ref<WeekBalance | null>(null)
 const deletingId = ref<number | null>(null)
 
 function viennaToday(): string {
@@ -59,15 +63,22 @@ const dayLabel = computed(() => {
 
 async function load() {
   const date = selectedDate.value
-  const [day, currentSettings, currentEnergy] = await Promise.all([
+  const [day, currentSettings, currentEnergy, currentWeek] = await Promise.all([
     isToday.value ? fetchToday() : fetchDay(date),
     fetchSettings(),
     (isToday.value ? fetchEnergy() : fetchEnergy(date)).catch(() => null),
+    fetchWeekBalance(isToday.value ? undefined : date).catch(() => null),
   ])
   if (date !== selectedDate.value) return
   summary.value = day
   settings.value = currentSettings
   energy.value = currentEnergy
+  week.value = currentWeek?.days ? currentWeek : null
+}
+
+function showDay(date: string) {
+  selectedDate.value = date
+  load()
 }
 
 function goToDay(days: number) {
@@ -367,6 +378,14 @@ function mealKcal(meal: Meal): number {
       </p>
     </div>
   </section>
+
+  <WeekBalanceCard
+    v-if="week && settings"
+    class="mt-3"
+    :week="week"
+    :mode="settings.mode"
+    @select-day="showDay"
+  />
 
   <section class="mt-8 pb-32">
     <h2 class="text-2xl font-semibold">Meals</h2>

@@ -11,6 +11,9 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 @Service
 public class WhoopService {
@@ -97,11 +100,7 @@ public class WhoopService {
     }
 
     public EnergyResponse getEnergy(LocalDate date){
-        WhoopCycleResponse response = restClient.get()
-                .uri(CYCLE_URL)
-                .header("Authorization", "Bearer " + getValidAccessToken())
-                .retrieve()
-                .body(WhoopCycleResponse.class);
+        WhoopCycleResponse response = fetchCycles();
 
         LocalDate day = date != null ? date : LocalDate.now(VIENNA);
         double dayKj = 0;
@@ -114,7 +113,7 @@ public class WhoopService {
             if (!"SCORED".equals(cycle.scoreState())) {
                 continue;
             }
-            if (cycle.start().isBefore(noon) && (cycle.end() == null || cycle.end().isAfter(noon))) {
+            if (containsNoon(cycle, noon)) {
                 dayKj = cycle.score().kilojoule();
             }
             if (cycle.end() != null && cycle.start().isAfter(weekStart)) {
@@ -125,5 +124,32 @@ public class WhoopService {
         int dayKcal = (int) Math.round(dayKj / KJ_PER_KCAL);
         int weeklyAverageKcal = (int) Math.round(weekKj / weekDays / KJ_PER_KCAL);
         return new EnergyResponse(weeklyAverageKcal, dayKcal);
+    }
+
+    public Map<LocalDate, Integer> getBurnByDay(List<LocalDate> days) {
+        WhoopCycleResponse response = fetchCycles();
+        Map<LocalDate, Integer> burnByDay = new HashMap<>();
+
+        for (LocalDate day : days) {
+            Instant noon = day.atTime(12, 0).atZone(VIENNA).toInstant();
+            for (WhoopCycle cycle : response.records()) {
+                if ("SCORED".equals(cycle.scoreState()) && containsNoon(cycle, noon)) {
+                    burnByDay.put(day, (int) Math.round(cycle.score().kilojoule() / KJ_PER_KCAL));
+                }
+            }
+        }
+        return burnByDay;
+    }
+
+    private WhoopCycleResponse fetchCycles() {
+        return restClient.get()
+                .uri(CYCLE_URL)
+                .header("Authorization", "Bearer " + getValidAccessToken())
+                .retrieve()
+                .body(WhoopCycleResponse.class);
+    }
+
+    private boolean containsNoon(WhoopCycle cycle, Instant noon) {
+        return cycle.start().isBefore(noon) && (cycle.end() == null || cycle.end().isAfter(noon));
     }
 }
