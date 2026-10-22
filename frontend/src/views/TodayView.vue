@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { RouterLink, useRouter } from 'vue-router'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
 import {
   Weight as WeightIcon,
   Check,
@@ -47,8 +47,25 @@ function shiftDate(date: string, days: number): string {
   return shifted.toISOString().slice(0, 10)
 }
 
-const selectedDate = ref(viennaToday())
+const route = useRoute()
+const router = useRouter()
+
+function initialDate(): string {
+  const date = route.query.date
+  if (typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date) && date < viennaToday()) {
+    return date
+  }
+  return viennaToday()
+}
+
+const selectedDate = ref(initialDate())
 const isToday = computed(() => selectedDate.value === viennaToday())
+
+const addMealLocation = computed(() =>
+  isToday.value
+    ? { name: 'add-meal' }
+    : { name: 'add-meal', query: { date: selectedDate.value } },
+)
 
 const dayLabel = computed(() => {
   if (isToday.value) return 'Today'
@@ -78,14 +95,14 @@ async function load() {
 
 function showDay(date: string) {
   selectedDate.value = date
+  router.replace({ query: isToday.value ? {} : { date } })
   load()
 }
 
 function goToDay(days: number) {
   const next = shiftDate(selectedDate.value, days)
   if (next > viennaToday()) return
-  selectedDate.value = next
-  load()
+  showDay(next)
 }
 
 const kcalGoal = computed(() => energy.value?.weeklyAverageKcal ?? settings.value?.kcalReference)
@@ -184,8 +201,6 @@ function formatTime(eatenAt: string): string {
     timeZone: 'Europe/Vienna',
   })
 }
-
-const router = useRouter()
 
 async function toggleFavourite(meal: Meal) {
   try {
@@ -396,7 +411,7 @@ function mealKcal(meal: Meal): number {
     >
       <p class="caps text-sm">Nothing logged yet</p>
       <p class="mt-1 text-sm text-muted-foreground">
-        {{ isToday ? 'Tap Add meal to log what you ate.' : 'No meals were logged that day.' }}
+        {{ isToday ? 'Tap Add meal to log what you ate.' : 'Forgot something? Add it below.' }}
       </p>
     </div>
 
@@ -547,15 +562,14 @@ function mealKcal(meal: Meal): number {
   </section>
 
   <div
-    v-if="isToday"
     class="pointer-events-none fixed inset-x-0 bottom-0 mx-auto flex max-w-md justify-center bg-gradient-to-t from-background via-background/80 to-transparent px-4 pt-10 pb-[max(1.25rem,env(safe-area-inset-bottom))]"
   >
     <RouterLink
-      :to="{ name: 'add-meal' }"
+      :to="addMealLocation"
       class="caps pointer-events-auto flex items-center gap-2 rounded-full bg-white px-8 py-4 text-sm text-zinc-950 shadow-[0_8px_30px_rgb(0_0_0/0.45)]"
     >
       <Plus class="size-5" :stroke-width="2.5" />
-      Add meal
+      {{ isToday ? 'Add meal' : `Add to ${dayLabel}` }}
     </RouterLink>
   </div>
 </template>

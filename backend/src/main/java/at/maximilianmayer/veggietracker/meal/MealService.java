@@ -27,7 +27,7 @@ public class MealService {
 
 
    public MealResponse createMeal(CreateMealRequest request) {
-        Meal meal = new Meal(Instant.now(),
+        Meal meal = new Meal(eatenAt(request.eatenOn()),
                 request.name(),
                 request.enteredText(),
                 request.veggieHints());
@@ -46,6 +46,18 @@ public class MealService {
 
         Meal saved = mealRepository.save(meal);
         return MealResponse.from(saved);
+    }
+
+    private Instant eatenAt(LocalDate eatenOn) {
+        LocalDate today = LocalDate.now(VIENNA);
+
+        if (eatenOn == null || eatenOn.equals(today)) {
+            return Instant.now();
+        }
+        if (eatenOn.isAfter(today)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Meals can't be logged for future days");
+        }
+        return eatenOn.atTime(12, 0).atZone(VIENNA).toInstant();
     }
 
 

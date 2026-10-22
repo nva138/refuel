@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
-import { useRouter } from 'vue-router'
-import { Camera, Plus, ScanLine, Sparkles, Star, TriangleAlert, X } from '@lucide/vue'
+import { useRoute, useRouter } from 'vue-router'
+import { CalendarDays, Camera, Plus, ScanLine, Sparkles, Star, TriangleAlert, X } from '@lucide/vue'
 import PageHeader from '@/components/PageHeader.vue'
 import {
   createMeal,
@@ -27,6 +27,18 @@ interface PartForm {
 }
 
 const router = useRouter()
+const route = useRoute()
+
+const eatenOn = typeof route.query.date === 'string' ? route.query.date : null
+const todayLocation = eatenOn ? { name: 'today', query: { date: eatenOn } } : { name: 'today' }
+const eatenOnLabel = eatenOn
+  ? new Date(`${eatenOn}T00:00:00Z`).toLocaleDateString('en-GB', {
+      weekday: 'short',
+      day: 'numeric',
+      month: 'short',
+      timeZone: 'UTC',
+    })
+  : null
 
 const form = reactive({
   name: '',
@@ -272,13 +284,14 @@ async function save() {
       fatPer100g: toNumber(part.fatPer100g),
       amountG: toNumber(part.amountG),
     })),
+    eatenOn,
   }
 
   saving.value = true
   error.value = null
   try {
     await createMeal(request)
-    await router.push({ name: 'today' })
+    await router.push(todayLocation)
   } catch {
     error.value = 'Saving failed. Is the backend running?'
   } finally {
@@ -292,9 +305,16 @@ const numberInputClass = `${inputClass} figure text-lg`
 </script>
 
 <template>
-  <PageHeader title="Add meal" />
+  <PageHeader title="Add meal" :back="todayLocation" />
 
   <form class="mt-8 space-y-3 pb-32" @submit.prevent="save">
+    <p
+      v-if="eatenOnLabel"
+      class="caps flex items-center gap-2 rounded-2xl bg-sky-400/10 p-4 text-sm text-sky-200 ring-1 ring-sky-400/30"
+    >
+      <CalendarDays class="size-4" />
+      Adding to {{ eatenOnLabel }}
+    </p>
     <section v-if="favourites.length > 0" class="rounded-2xl bg-card p-4">
       <h2 class="caps flex items-center gap-2 text-xs text-muted-foreground">
         <Star class="size-4 text-amber-300" fill="currentColor" />

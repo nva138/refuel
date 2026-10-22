@@ -41,6 +41,7 @@ export interface CreateMealRequest {
   enteredText: string | null
   veggieHints: string[]
   parts: CreateMealPartRequest[]
+  eatenOn: string | null
 }
 
 export interface SuggestMealRequest {
